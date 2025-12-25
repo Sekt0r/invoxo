@@ -1,0 +1,46 @@
+created:
+    - app/Http/Controllers/ClientController.php
+    - app/Http/Controllers/InvoiceController.php
+    - database/factories/CompanyFactory.php
+    - database/factories/PlanFactory.php
+    - database/factories/SubscriptionFactory.php
+    - database/factories/ClientFactory.php
+    - database/factories/TaxRateFactory.php
+    - database/factories/InvoiceFactory.php
+    - database/factories/InvoiceItemFactory.php
+    - database/migrations/2025_12_25_112805_create_companies_table.php
+    - database/migrations/2025_12_25_112806_create_plans_table.php
+    - database/migrations/2025_12_25_112807_create_subscriptions_table.php
+    - database/migrations/2025_12_25_112808_create_clients_table.php
+    - database/migrations/2025_12_25_112809_create_tax_rates_table.php
+    - database/migrations/2025_12_25_112810_create_invoices_table.php
+    - database/migrations/2025_12_25_112811_create_invoice_items_table.php
+    - app/Models/Company.php
+    - app/Models/Plan.php
+    - app/Models/Subscription.php
+    - app/Models/Client.php
+    - app/Models/TaxRate.php
+    - app/Models/Invoice.php
+    - app/Models/InvoiceItem.php
+    - tests/Feature/Http/Controllers/ClientControllerTest.php
+    - tests/Feature/Http/Controllers/InvoiceControllerTest.php
+updated:
+    - routes/web.php
+skipped:
+    - resources/views/client/index.blade.php
+    - resources/views/client/create.blade.php
+    - resources/views/client/show.blade.php
+    - resources/views/client/edit.blade.php
+    - resources/views/invoice/index.blade.php
+    - resources/views/invoice/create.blade.php
+    - resources/views/invoice/show.blade.php
+    - resources/views/invoice/edit.blade.php
+models:
+    User: { company_id: 'id foreign:companies', relationships: { belongsTo: Company } }
+    Company: { name: string, country_code: 'char:2', vat_id: 'string nullable', base_currency: 'char:3 default:EUR', default_vat_rate: 'decimal:5,2 default:0', invoice_prefix: 'string default:INV-', relationships: { hasMany: 'Client, Invoice, Subscription' } }
+    Plan: { code: 'string unique', name: string, monthly_price_eur: integer, invoice_monthly_limit: 'integer nullable', relationships: { hasMany: Subscription } }
+    Subscription: { company_id: 'id foreign:companies', plan_id: 'id foreign:plans', starts_at: timestamp, ends_at: 'timestamp nullable', relationships: { belongsTo: 'Company, Plan' } }
+    Client: { company_id: 'id foreign:companies', name: string, country_code: 'char:2', vat_id: 'string nullable', softdeletes: softDeletes, relationships: { belongsTo: Company, hasMany: Invoice } }
+    TaxRate: { country_code: 'char:2 unique', tax_type: 'string default:vat', standard_rate: 'decimal:5,2 default:0', source: 'string nullable' }
+    Invoice: { company_id: 'id foreign:companies', client_id: 'id foreign:clients', public_id: 'uuid unique', share_token: 'string:64 nullable index', number: 'string nullable', status: 'string default:draft', issue_date: 'date nullable', due_date: 'date nullable', tax_treatment: 'string default:DOMESTIC', vat_rate: 'decimal:5,2 default:0', vat_reason_text: 'string nullable', subtotal_minor: 'bigInteger default:0', vat_minor: 'bigInteger default:0', total_minor: 'bigInteger default:0', relationships: { belongsTo: 'Company, Client', hasMany: InvoiceItem } }
+    InvoiceItem: { invoice_id: 'id foreign:invoices', description: text, quantity: 'decimal:10,2 default:1', unit_price_minor: 'bigInteger default:0', line_total_minor: 'bigInteger default:0', relationships: { belongsTo: Invoice } }
