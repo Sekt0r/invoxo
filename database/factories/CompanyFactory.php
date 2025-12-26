@@ -11,10 +11,14 @@ class CompanyFactory extends Factory
      */
     public function definition(): array
     {
+        $country = fake()->randomElement(['DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'RO', 'PL']);
+
         return [
             'name' => fake()->name(),
-            'country_code' => fake()->randomLetter(),
-            'vat_id' => fake()->word(),
+            // Use a valid 2-letter ISO country code (randomLetter() produces invalid 1-letter codes).
+            'country_code' => $country,
+            // Default: no VAT ID (many companies won't have it). Tests that need VAT set it explicitly.
+            'vat_id' => null,
             'registration_number' => fake()->bothify('??#######'), // Random alphanumeric
             'tax_identifier' => fake()->bothify('??#######'),
             'address_line1' => fake()->streetAddress(),
@@ -22,7 +26,8 @@ class CompanyFactory extends Factory
             'city' => fake()->city(),
             'postal_code' => fake()->postcode(),
             'default_vat_rate' => fake()->randomFloat(2, 0, 999.99),
-            'invoice_prefix' => fake()->word(),
+            // Stable default used throughout the product/tests.
+            'invoice_prefix' => 'INV',
         ];
     }
 }

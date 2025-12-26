@@ -39,9 +39,11 @@ class InvoiceFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'issued',
-            'number' => 'INV-' . date('Y') . '-' . str_pad((string) fake()->unique()->numberBetween(1, 999999), 6, '0', STR_PAD_LEFT),
-            'issue_date' => fake()->date(),
-            'due_date' => fake()->date(),
+            // Use Carbon's "now()" so this remains deterministic under Carbon::setTestNow().
+            // Keep issue_date year consistent with the number's year.
+            'number' => 'INV-' . now()->year . '-' . str_pad((string) fake()->unique()->numberBetween(1, 999999), 6, '0', STR_PAD_LEFT),
+            'issue_date' => now()->toDateString(),
+            'due_date' => now()->copy()->addDays(14)->toDateString(),
             'tax_treatment' => 'DOMESTIC',
             'vat_rate' => fake()->randomFloat(2, 0, 27),
             'subtotal_minor' => fake()->numberBetween(10000, 100000),

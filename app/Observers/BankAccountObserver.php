@@ -21,14 +21,19 @@ class BankAccountObserver
      */
     public function updated(BankAccount $bankAccount): void
     {
+        // NOTE: In the "updated" event, getDirty() is typically empty because the model
+        // has already been persisted. Use getChanges() to capture what actually changed.
+        $changes = $bankAccount->getChanges();
+        if (empty($changes)) {
+            return;
+        }
+
         $oldValues = [];
-        foreach ($bankAccount->getDirty() as $key => $value) {
+        foreach (array_keys($changes) as $key) {
             $oldValues[$key] = $bankAccount->getOriginal($key);
         }
 
-        if (!empty($oldValues)) {
-            $this->logEvent($bankAccount, 'updated', $oldValues, $bankAccount->toArray());
-        }
+        $this->logEvent($bankAccount, 'updated', $oldValues, $bankAccount->toArray());
     }
 
     /**
