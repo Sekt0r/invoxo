@@ -1,4 +1,4 @@
-FROM php:8.5-cli-trixie
+FROM php:8.4-cli-trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
@@ -21,8 +21,7 @@ RUN apt-get update \
 RUN docker-php-ext-install -j$(nproc) pgsql pdo_pgsql opcache xml soap zip pcntl
 
 # OpenSwoole (Octane uses `--server=swoole` even when the extension is openswoole)
-RUN pecl install openswoole \
- && docker-php-ext-enable openswoole
+RUN pecl install openswoole && docker-php-ext-enable openswoole
 
 WORKDIR /app
 
