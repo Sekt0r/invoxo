@@ -49,6 +49,8 @@ services:
   worker:
     <<: *app-base
     ports: []
+    env_file:
+      - .env.docker
     environment:
       CONTAINER_ROLE: worker
     command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=3", "--timeout=120", "--max-time=3600"]
@@ -57,6 +59,8 @@ services:
   scheduler:
     <<: *app-base
     ports: []
+    env_file:
+      - .env.docker
     environment:
       CONTAINER_ROLE: scheduler
     command: ["php", "artisan", "schedule:work"]
