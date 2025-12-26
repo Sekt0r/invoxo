@@ -1,4 +1,4 @@
-FROM php:8.2-cli-bullseye
+FROM php:8.5-cli-bullseye
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
