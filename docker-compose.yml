@@ -7,14 +7,13 @@ volumes:
 services:
   postgres:
     image: postgres:16
-    env_file:
-      - .env.docker
     environment:
       POSTGRES_DB: ${DB_DATABASE:-invoxo}
       POSTGRES_USER: ${DB_USERNAME:-invoxo}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-invoxo_password}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres_initdb:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-invoxo} -d ${DB_DATABASE:-invoxo}"]
       interval: 5s
@@ -26,8 +25,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env.docker
     environment:
       CONTAINER_ROLE: app
       NPM_BUILD: "1"
@@ -46,8 +43,6 @@ services:
   worker:
     <<: *app-base
     ports: []
-    env_file:
-      - .env.docker
     environment:
       CONTAINER_ROLE: worker
     command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=3", "--timeout=120", "--max-time=3600"]
@@ -56,8 +51,6 @@ services:
   scheduler:
     <<: *app-base
     ports: []
-    env_file:
-      - .env.docker
     environment:
       CONTAINER_ROLE: scheduler
     command: ["php", "artisan", "schedule:work"]
