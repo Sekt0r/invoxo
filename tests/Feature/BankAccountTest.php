@@ -502,7 +502,7 @@ class BankAccountTest extends TestCase
         $this->assertEquals('draft', $invoice->status);
     }
 
-    public function test_invoice_issue_allows_without_payment_details_if_company_has_no_bank_accounts(): void
+    public function test_invoice_issue_fails_if_company_has_no_bank_accounts(): void
     {
         $user = User::factory()->create();
         $company = $user->company;
@@ -526,15 +526,10 @@ class BankAccountTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('invoices.issue', $invoice));
 
-        // Should not fail due to missing payment_details (company has no bank accounts)
-        // May fail for other reasons (VAT, limits, etc.) but not payment_details
-        if (!$response->isRedirect(route('invoices.show', $invoice))) {
-            // If there's an error, it should NOT be about payment_details
-            $errors = $response->getSession()->get('errors');
-            if ($errors) {
-                $this->assertStringNotContainsString('payment', strtolower($errors->first('vat', '')));
-            }
-        }
+        $response->assertRedirect(route('invoices.show', $invoice));
+
+        $invoice->refresh();
+        $this->assertEquals('draft', $invoice->status);
     }
 }
 
