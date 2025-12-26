@@ -98,4 +98,3 @@ class InvoicePdfTest extends TestCase
         $response->assertHeader('Content-Type', 'application/pdf');
     }
 }
-

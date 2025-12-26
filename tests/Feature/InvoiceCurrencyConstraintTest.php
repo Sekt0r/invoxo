@@ -322,4 +322,3 @@ class InvoiceCurrencyConstraintTest extends TestCase
         $this->assertCount(2, $snapshotAccounts); // Should still have 2 in snapshot
     }
 }
-

@@ -456,4 +456,3 @@ class DraftInvoiceRecomputeTest extends TestCase
         $this->assertEquals('EU_B2C', $invoice->tax_treatment, 'DE client + FR seller = EU_B2C');
     }
 }
-

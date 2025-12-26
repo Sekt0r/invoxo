@@ -161,10 +161,3 @@ class UsageMeterTest extends TestCase
         $this->assertEquals('UNLIMITED', $usage['plan_code']);
     }
 }
-
-
-
-
-
-
-

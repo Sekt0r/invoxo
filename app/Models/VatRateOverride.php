@@ -23,9 +23,3 @@ class VatRateOverride extends Model
         ];
     }
 }
-
-
-
-
-
-

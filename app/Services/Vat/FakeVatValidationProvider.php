@@ -42,4 +42,3 @@ final class FakeVatValidationProvider implements VatValidationProviderInterface
         );
     }
 }
-

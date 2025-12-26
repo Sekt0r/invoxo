@@ -226,4 +226,3 @@ class VatIdentityTest extends TestCase
         $this->assertNull($company->vat_identity_id);
     }
 }
-

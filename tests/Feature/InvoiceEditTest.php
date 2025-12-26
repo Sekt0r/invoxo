@@ -295,4 +295,3 @@ class InvoiceEditTest extends TestCase
         ]);
     }
 }
-

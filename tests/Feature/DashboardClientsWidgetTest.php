@@ -87,4 +87,3 @@ class DashboardClientsWidgetTest extends TestCase
         $response->assertSee(route('clients.create'), false);
     }
 }
-

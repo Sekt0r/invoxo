@@ -166,4 +166,3 @@ class InvoiceUpdateTest extends TestCase
         $response->assertStatus(403);
     }
 }
-

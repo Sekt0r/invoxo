@@ -312,4 +312,3 @@ class InvoiceVatChangeBannerTest extends TestCase
         $response->assertSee('Client VAT validation status changed');
     }
 }
-

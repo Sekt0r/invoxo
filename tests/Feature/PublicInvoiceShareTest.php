@@ -107,4 +107,3 @@ class PublicInvoiceShareTest extends TestCase
         $response->assertSee('Test Company', false);
     }
 }
-

@@ -58,21 +58,13 @@ class DashboardController extends Controller
         // Load invoice history by month (last 6 months including current)
         $sixMonthsAgo = Carbon::now()->subMonths(5)->startOfMonth();
 
-        // Use database-agnostic date formatting
-        $driverName = \Illuminate\Support\Facades\DB::connection()->getDriverName();
-        if ($driverName === 'sqlite') {
-            $monthFormat = "strftime('%Y-%m', issue_date)";
-        } else {
-            $monthFormat = "DATE_FORMAT(issue_date, '%Y-%m')";
-        }
-
         $invoiceHistoryByMonth = Invoice::query()
             ->where('company_id', $company->id)
             ->whereIn('status', ['issued', 'paid'])
             ->whereNotNull('issue_date')
             ->where('issue_date', '>=', $sixMonthsAgo->toDateString())
             ->selectRaw("
-                {$monthFormat} as month_key,
+                to_char(issue_date, 'YYYY-MM') as month_key,
                 currency,
                 SUM(total_minor) as total_minor
             ")
@@ -97,4 +89,3 @@ class DashboardController extends Controller
         ]);
     }
 }
-

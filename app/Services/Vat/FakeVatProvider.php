@@ -91,9 +91,3 @@ class FakeVatProvider implements VatProvider
         ];
     }
 }
-
-
-
-
-
-

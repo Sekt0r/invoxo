@@ -121,9 +121,3 @@ class ApilayerVatProvider implements VatProvider
         }
     }
 }
-
-
-
-
-
-

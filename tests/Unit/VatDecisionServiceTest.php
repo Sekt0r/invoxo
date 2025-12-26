@@ -99,9 +99,3 @@ class VatDecisionServiceTest extends TestCase
         $this->assertEquals('DOMESTIC', $decision->taxTreatment);
     }
 }
-
-
-
-
-
-

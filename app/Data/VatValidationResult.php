@@ -14,8 +14,3 @@ final class VatValidationResult
     ) {
     }
 }
-
-
-
-
-

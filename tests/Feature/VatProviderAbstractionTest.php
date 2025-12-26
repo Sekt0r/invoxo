@@ -127,9 +127,3 @@ class VatProviderAbstractionTest extends TestCase
         $this->assertEquals('provider', $vatIdentity->source); // Should not have environment check
     }
 }
-
-
-
-
-
-

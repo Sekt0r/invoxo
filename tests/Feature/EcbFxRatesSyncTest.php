@@ -227,4 +227,3 @@ XML;
         $this->assertEquals(1, $eurRateCount, 'EUR->EUR rate should exist exactly once after multiple runs');
     }
 }
-

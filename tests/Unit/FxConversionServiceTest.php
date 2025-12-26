@@ -172,9 +172,3 @@ class FxConversionServiceTest extends TestCase
         $this->assertEquals(11200, $result);
     }
 }
-
-
-
-
-
-

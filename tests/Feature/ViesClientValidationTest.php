@@ -221,4 +221,3 @@ class ViesClientValidationTest extends TestCase
         $this->assertEquals(19.00, $decisionInvalid->vatRate);
     }
 }
-

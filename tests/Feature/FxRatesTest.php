@@ -81,4 +81,3 @@ class FxRatesTest extends TestCase
         $service->syncDaily();
     }
 }
-

@@ -187,4 +187,3 @@ class InvoiceSellerSnapshotTest extends TestCase
         $this->assertEquals('456 Updated Street', $invoice->company->address_line1);
     }
 }
-

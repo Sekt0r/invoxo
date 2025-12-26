@@ -43,9 +43,3 @@ class VatRateResolver
         ];
     }
 }
-
-
-
-
-
-

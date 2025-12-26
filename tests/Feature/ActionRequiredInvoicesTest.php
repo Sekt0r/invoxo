@@ -219,9 +219,3 @@ class ActionRequiredInvoicesTest extends TestCase
         $response->assertSee(route('invoices.show', $invoice));
     }
 }
-
-
-
-
-
-

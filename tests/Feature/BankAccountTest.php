@@ -532,4 +532,3 @@ class BankAccountTest extends TestCase
         $this->assertEquals('draft', $invoice->status);
     }
 }
-

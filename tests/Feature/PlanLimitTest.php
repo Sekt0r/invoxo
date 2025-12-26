@@ -214,4 +214,3 @@ class PlanLimitTest extends TestCase
         $this->assertNotNull($draftInvoice->number);
     }
 }
-

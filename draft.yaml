@@ -1,79 +1,165 @@
 models:
+  BankAccount:
+    company_id: foreignId
+    currency: char:3
+    iban: string
+    nickname: string nullable
+    is_default: boolean default:false
+    timestamps
+    softDeletes
+
+  BankAccountEvent:
+    company_id: foreignId
+    bank_account_id: foreignId nullable
+    user_id: foreignId nullable
+    action: string
+    old_values: json nullable
+    new_values: json nullable
+    ip_address: string:45 nullable
+    timestamps
+
+  Client:
+    company_id: foreignId
+    name: string
+    country_code: char:2
+    vat_id: string nullable
+    registration_number: string nullable
+    tax_identifier: string nullable
+    address_line1: string nullable
+    address_line2: string nullable
+    city: string nullable
+    postal_code: string nullable
+    vat_validation_status: string nullable
+    vat_validated_at: timestamp nullable
+    vat_validation_name: string nullable
+    vat_validation_address: text nullable
+    vat_identity_id: foreignId nullable
+    timestamps
+    softDeletes
+
   Company:
     name: string
     country_code: char:2
     vat_id: string nullable
-    base_currency: char:3 default:EUR
+    registration_number: string nullable
+    tax_identifier: string nullable
+    address_line1: string nullable
+    address_line2: string nullable
+    city: string nullable
+    postal_code: string nullable
+    vat_identity_id: foreignId nullable
     default_vat_rate: decimal:5,2 default:0
-    invoice_prefix: string default:INV-
-    relationships:
-      hasMany: Client, Invoice, Subscription
+    vat_override_enabled: boolean default:false
+    vat_override_rate: decimal:5,2 nullable
+    invoice_prefix: string default:'INV-'
+    timestamps
+
+  FxRate:
+    base_currency: char:3 default:'EUR'
+    quote_currency: char:3
+    rate: decimal:18,8
+    as_of_date: date
+    source: string default:'ecb'
+    timestamps
+
+  Invoice:
+    company_id: foreignId
+    client_id: foreignId
+    public_id: uuid unique
+    share_token: string:64 nullable
+    number: string nullable
+    status: string default:'draft'
+    issue_date: date nullable
+    due_date: date nullable
+    tax_treatment: string default:'DOMESTIC'
+    vat_rate: decimal:5,2 default:0
+    vat_reason_text: string nullable
+    vat_decided_at: timestamp nullable
+    client_vat_status_snapshot: string nullable
+    client_vat_id_snapshot: string:32 nullable
+    subtotal_minor: bigInteger default:0
+    vat_minor: bigInteger default:0
+    total_minor: bigInteger default:0
+    currency: char:3 nullable
+    payment_details: json nullable
+    seller_details: json nullable
+    buyer_details: json nullable
+    timestamps
+
+  InvoiceEvent:
+    company_id: foreignId
+    invoice_id: foreignId
+    user_id: foreignId nullable
+    event_type: string
+    from_status: string nullable
+    to_status: string nullable
+    message: text nullable
+    meta_json: json nullable
+    timestamps
+
+  InvoiceItem:
+    invoice_id: foreignId
+    description: text
+    quantity: decimal:10,2 default:1
+    unit_price_minor: bigInteger default:0
+    line_total_minor: bigInteger default:0
+    timestamps
+
+  InvoiceSequence:
+    company_id: foreignId
+    year: integer
+    prefix: string:32
+    last_number: integer default:0
+    timestamps
 
   Plan:
     code: string unique
     name: string
     monthly_price_eur: integer
     invoice_monthly_limit: integer nullable
-    relationships:
-      hasMany: Subscription
+    timestamps
 
   Subscription:
-    company_id: id foreign:companies
-    plan_id: id foreign:plans
+    company_id: foreignId
+    plan_id: foreignId
     starts_at: timestamp
     ends_at: timestamp nullable
-    relationships:
-      belongsTo: Company, Plan
-
-  Client:
-    company_id: id foreign:companies
-    name: string
-    country_code: char:2
-    vat_id: string nullable
-    softDeletes: true
-    relationships:
-      belongsTo: Company
-      hasMany: Invoice
+    timestamps
 
   TaxRate:
     country_code: char:2 unique
-    tax_type: string default:vat
+    tax_type: string default:'vat'
     standard_rate: decimal:5,2 default:0
+    reduced_rates: json nullable
     source: string nullable
+    fetched_at: timestamp nullable
+    timestamps
 
-  Invoice:
-    company_id: id foreign:companies
-    client_id: id foreign:clients
-    public_id: uuid unique
-    share_token: string:64 nullable index
-    number: string nullable
-    status: string default:draft
-    issue_date: date nullable
-    due_date: date nullable
+  User:
+    company_id: foreignId nullable
+    name: string
+    email: string unique
+    email_verified_at: timestamp nullable
+    password: string
+    remember_token: rememberToken
+    timestamps
 
-    tax_treatment: string default:DOMESTIC
-    vat_rate: decimal:5,2 default:0
-    vat_reason_text: string nullable
+  VatIdentity:
+    country_code: char:2
+    vat_id: string
+    status: string
+    status_updated_at: timestamp nullable
+    name: string nullable
+    address: text nullable
+    last_checked_at: timestamp nullable
+    last_enqueued_at: timestamp nullable
+    last_error: text nullable
+    source: string nullable
+    provider_metadata: json nullable
+    timestamps
 
-    subtotal_minor: bigInteger default:0
-    vat_minor: bigInteger default:0
-    total_minor: bigInteger default:0
-
-    relationships:
-      belongsTo: Company, Client
-      hasMany: InvoiceItem
-
-  InvoiceItem:
-    invoice_id: id foreign:invoices
-    description: text
-    quantity: decimal:10,2 default:1
-    unit_price_minor: bigInteger default:0
-    line_total_minor: bigInteger default:0
-    relationships:
-      belongsTo: Invoice
-
-controllers:
-  ClientController:
-    resource: web
-  InvoiceController:
-    resource: web
+  VatRateOverride:
+    country_code: char:2 unique
+    standard_rate: decimal:5,2
+    note: text nullable
+    timestamps

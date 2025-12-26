@@ -191,4 +191,3 @@ class VatIdentityJobSchedulingTest extends TestCase
         $this->assertEquals($vatIdentity->id, $result->id);
     }
 }
-

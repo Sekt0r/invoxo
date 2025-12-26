@@ -37,9 +37,3 @@ final class FakeVatRatesProvider implements VatRatesProviderInterface
         ];
     }
 }
-
-
-
-
-
-

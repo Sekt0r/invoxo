@@ -72,4 +72,3 @@ final class InvoiceNumberService
         return $prefix . '-' . $year . '-' . str_pad((string)$sequence->last_number, 6, '0', STR_PAD_LEFT);
     }
 }
-

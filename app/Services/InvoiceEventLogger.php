@@ -56,9 +56,3 @@ final class InvoiceEventLogger
         ]);
     }
 }
-
-
-
-
-
-

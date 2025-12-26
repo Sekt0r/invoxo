@@ -452,4 +452,3 @@ class InvoiceSequenceNumberTest extends TestCase
         $this->assertEquals(1, $sequence2026->last_number);
     }
 }
-

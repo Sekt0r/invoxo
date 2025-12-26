@@ -193,4 +193,3 @@ class InvoiceCurrencyTest extends TestCase
         $this->assertEquals('USD', $invoiceB->currency); // Unchanged
     }
 }
-

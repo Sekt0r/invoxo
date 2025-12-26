@@ -328,6 +328,3 @@ class InvoiceAuditLogTest extends TestCase
         $response->assertSee('paid');
     }
 }
-
-
-

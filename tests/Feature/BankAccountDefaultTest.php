@@ -173,4 +173,3 @@ class BankAccountDefaultTest extends TestCase
         $this->assertTrue($account1Events->isNotEmpty() || $account2Events->isNotEmpty(), 'At least one account should have an audit event');
     }
 }
-

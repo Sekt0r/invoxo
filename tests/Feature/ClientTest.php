@@ -192,5 +192,3 @@ class ClientTest extends TestCase
         $response->assertSee('Germany', false);
     }
 }
-
-

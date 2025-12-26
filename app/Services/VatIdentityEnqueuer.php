@@ -97,4 +97,3 @@ final class VatIdentityEnqueuer
         return true;
     }
 }
-

@@ -208,4 +208,3 @@ class InvoiceVatPreviewTest extends TestCase
         $response->assertJsonValidationErrors(['client_id']);
     }
 }
-

@@ -210,4 +210,3 @@ class CompanyLegalIdentityTest extends TestCase
         ]);
     }
 }
-

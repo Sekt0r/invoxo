@@ -33,10 +33,3 @@ class Money
         return number_format($minorUnits / 100, 2) . ' ' . $currency;
     }
 }
-
-
-
-
-
-
-

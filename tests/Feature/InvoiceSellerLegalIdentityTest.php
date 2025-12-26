@@ -225,4 +225,3 @@ class InvoiceSellerLegalIdentityTest extends TestCase
         $this->assertEquals('draft', $invoice->status);
     }
 }
-

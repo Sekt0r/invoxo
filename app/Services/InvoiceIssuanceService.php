@@ -181,4 +181,3 @@ final class InvoiceIssuanceService
         return (float)$company->default_vat_rate;
     }
 }
-

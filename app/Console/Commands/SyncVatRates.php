@@ -41,10 +41,3 @@ class SyncVatRates extends Command
         }
     }
 }
-
-
-
-
-
-
-

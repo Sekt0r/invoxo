@@ -42,4 +42,3 @@ class VatRatesSyncTest extends TestCase
         $this->assertTrue($result['success']);
     }
 }
-

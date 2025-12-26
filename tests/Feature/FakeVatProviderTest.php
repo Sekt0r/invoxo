@@ -69,9 +69,3 @@ class FakeVatProviderTest extends TestCase
         $this->assertEquals(20.0, $result['rates']['XX']['standard_rate']); // Default rate
     }
 }
-
-
-
-
-
-

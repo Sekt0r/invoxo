@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('invoice_sequences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
-            $table->integer('year')->unsigned();
+            $table->integer('year');
             $table->string('prefix', 32);
-            $table->integer('last_number')->unsigned()->default(0);
+            $table->integer('last_number')->default(0);
             $table->timestamps();
 
             // Unique constraint: one sequence per company/year/prefix combination

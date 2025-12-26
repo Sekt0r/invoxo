@@ -196,4 +196,3 @@ class InvoiceCreateTest extends TestCase
         $response->assertSessionHasErrors('items');
     }
 }
-

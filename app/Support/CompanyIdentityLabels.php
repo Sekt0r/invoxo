@@ -30,9 +30,3 @@ final class CompanyIdentityLabels
         ];
     }
 }
-
-
-
-
-
-

@@ -287,4 +287,3 @@
         });
     </script>
 </x-app-layout>
-

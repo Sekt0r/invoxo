@@ -207,4 +207,3 @@ class VatIdentitySharingTest extends TestCase
         $this->assertTrue($vatIdentityExists);
     }
 }
-

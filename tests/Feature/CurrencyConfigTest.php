@@ -209,4 +209,3 @@ class CurrencyConfigTest extends TestCase
         ]);
     }
 }
-

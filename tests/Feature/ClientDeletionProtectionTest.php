@@ -143,4 +143,3 @@ class ClientDeletionProtectionTest extends TestCase
         $this->assertEquals('Test Client', $loadedClient->name);
     }
 }
-

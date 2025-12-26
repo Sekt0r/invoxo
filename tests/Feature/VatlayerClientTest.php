@@ -76,4 +76,3 @@ class VatlayerClientTest extends TestCase
         $this->assertEquals(20.0, $result['rates']['FR']['standard_rate']);
     }
 }
-

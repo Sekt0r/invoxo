@@ -327,9 +327,3 @@ class ClientsWidgetTest extends TestCase
         $response->assertSee('None', false);
     }
 }
-
-
-
-
-
-

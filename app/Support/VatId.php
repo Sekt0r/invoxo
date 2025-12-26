@@ -23,5 +23,3 @@ class VatId
         return strtoupper($normalized);
     }
 }
-
-
