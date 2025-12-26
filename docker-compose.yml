@@ -20,8 +20,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    ports:
-      - "5432:5432"
 
   app: &app-base
     build: .
@@ -38,7 +36,6 @@ services:
     volumes:
       # Source code only
       - ./:/app
-
       # Docker-owned state
       - vendor:/app/vendor
       - node_modules:/app/node_modules
