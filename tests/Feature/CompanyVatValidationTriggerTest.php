@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Jobs\ValidateVatIdentityJob;
 use App\Models\Company;
 use App\Models\VatIdentity;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
@@ -50,12 +49,10 @@ class CompanyVatValidationTriggerTest extends TestCase
     {
         // Create a stale vat_identity (never checked, so stale)
         // Use normalized VAT ID to ensure VatIdentityLinker finds it
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->stale()->create([
             'country_code' => 'DE',
             'vat_id' => \App\Support\VatId::normalizeVatId('DE987654321'),
             'status' => 'pending',
-            'last_checked_at' => null, // Never checked, so stale
-            'last_enqueued_at' => null, // Not throttled
         ]);
 
         $company = Company::factory()->create([
@@ -73,6 +70,10 @@ class CompanyVatValidationTriggerTest extends TestCase
         // Refresh to ensure vat_identity_id is set by observer
         $company->refresh();
 
+        // Debug assertions to diagnose why job isn't pushed
+        $this->assertNotNull($company->vat_identity_id, 'vat_identity_id should be set');
+        $this->assertEquals($vatIdentity->id, $company->vat_identity_id, 'vat_identity_id should match stale vat_identity');
+
         // Should have enqueued validation job exactly once for stale vat_identity
         Queue::assertPushed(ValidateVatIdentityJob::class, 1);
         Queue::assertPushed(ValidateVatIdentityJob::class, function ($job) use ($vatIdentity) {
@@ -86,12 +87,10 @@ class CompanyVatValidationTriggerTest extends TestCase
     public function test_updating_company_vat_id_does_not_enqueue_when_fresh(): void
     {
         // Create a fresh vat_identity (checked within 30 days)
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->fresh()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE987654321',
             'status' => 'valid',
-            'last_checked_at' => Carbon::now()->subDays(5), // Fresh (< 30 days)
-            'last_enqueued_at' => null,
         ]);
 
         $company = Company::factory()->create([
@@ -147,13 +146,11 @@ class CompanyVatValidationTriggerTest extends TestCase
 
     public function test_dedupe_prevents_repeated_enqueues_within_10_minutes(): void
     {
-        // Create a stale vat_identity with recent last_enqueued_at
-        $vatIdentity = VatIdentity::create([
+        // Create a stale vat_identity with recent last_enqueued_at (throttled)
+        $vatIdentity = VatIdentity::factory()->stale()->recentlyEnqueued()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE987654321',
             'status' => 'pending',
-            'last_checked_at' => Carbon::now()->subDays(31), // Stale
-            'last_enqueued_at' => Carbon::now()->subMinutes(5), // Recently enqueued (< 10 minutes)
         ]);
 
         $company = Company::factory()->create([

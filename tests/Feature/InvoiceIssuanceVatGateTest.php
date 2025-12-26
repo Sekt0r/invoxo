@@ -59,11 +59,11 @@ class InvoiceIssuanceVatGateTest extends TestCase
 
         [$sellerCompany, $user] = $this->createCompanyWithBankAccount();
 
-        $vatIdentity = VatIdentity::create([
+        // Use factory default (null last_checked_at = stale/pending)
+        $vatIdentity = VatIdentity::factory()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'pending',
-            'last_checked_at' => null,
         ]);
 
         $client = Client::factory()->create([

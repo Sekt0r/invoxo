@@ -30,3 +30,4 @@ class FxRate extends Model
 
 
 
+

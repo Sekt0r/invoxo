@@ -12,7 +12,8 @@ class CompanyObserver
 {
     public function __construct(
         private VatIdentityLinker $vatIdentityLinker
-    ) {
+    )
+    {
     }
 
     /**
@@ -21,11 +22,14 @@ class CompanyObserver
      */
     public function saving(Company $company): void
     {
-        if ($company->exists && ! $company->isDirty(['country_code', 'vat_id'])) {
+        // Capture VAT intent BEFORE mutation
+        $company->vatIntentChanged = !$company->exists || $company->isDirty(['country_code', 'vat_id']);
+
+        if ($company->exists && !$company->vatIntentChanged) {
             return;
         }
 
-        $vatId = $company->vat_id !== null ? trim((string) $company->vat_id) : '';
+        $vatId = $company->vat_id !== null ? trim((string)$company->vat_id) : '';
 
         if ($vatId === '') {
             $company->vat_identity_id = null;
@@ -33,12 +37,13 @@ class CompanyObserver
         }
 
         $vatIdentity = $this->vatIdentityLinker->resolveOrCreate(
-            strtoupper((string) $company->country_code),
+            strtoupper((string)$company->country_code),
             $vatId
         );
 
         $company->vat_identity_id = $vatIdentity->id;
     }
+
 
     /**
      * Handle the Company "saved" event.
@@ -53,15 +58,11 @@ class CompanyObserver
     public function saved(Company $company): void
     {
         // Check if VAT fields changed OR if vat_identity_id changed (which indicates VAT ID changed)
-        $vatFieldsChanged = $company->wasChanged(['country_code', 'vat_id']);
-        $vatIdentityIdChanged = $company->wasChanged(['vat_identity_id']);
-        $isNewModel = $company->wasRecentlyCreated;
-
-        if (! $vatFieldsChanged && ! $vatIdentityIdChanged && ! $isNewModel) {
+        if (!($company->vatIntentChanged ?? false)) {
             return;
         }
 
-        $vatIdentityId = (int) ($company->vat_identity_id ?? 0);
+        $vatIdentityId = (int)($company->vat_identity_id ?? 0);
         if ($vatIdentityId <= 0) {
             return;
         }
@@ -75,7 +76,7 @@ class CompanyObserver
         $now = now();
         $isStale = $vatIdentity->last_checked_at === null || $vatIdentity->last_checked_at->lt($now->copy()->subDays(30));
 
-        if (! $isStale) {
+        if (!$isStale) {
             return;
         }
 

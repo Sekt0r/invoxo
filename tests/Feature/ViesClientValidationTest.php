@@ -126,11 +126,10 @@ class ViesClientValidationTest extends TestCase
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->stale()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'valid',
-            'last_checked_at' => Carbon::now()->subDays(31), // Older than 30 days
         ]);
 
         $client = Client::factory()->create([
@@ -160,11 +159,10 @@ class ViesClientValidationTest extends TestCase
         ]);
 
         // Test with valid VAT ID
-        $vatIdentityValid = VatIdentity::create([
+        $vatIdentityValid = VatIdentity::factory()->fresh()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'valid',
-            'last_checked_at' => now(),
         ]);
 
         $clientValid = Client::factory()->create([
@@ -183,11 +181,10 @@ class ViesClientValidationTest extends TestCase
         $this->assertStringContainsString('Reverse charge', $decision->reasonText);
 
         // Test with unknown VAT ID status (should fall back to B2C)
-        $vatIdentityUnknown = VatIdentity::create([
+        $vatIdentityUnknown = VatIdentity::factory()->fresh()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE888888888',
             'status' => 'unknown',
-            'last_checked_at' => now(),
         ]);
 
         $clientUnknown = Client::factory()->create([
@@ -204,11 +201,10 @@ class ViesClientValidationTest extends TestCase
         $this->assertEquals(19.00, $decisionUnknown->vatRate);
 
         // Test with invalid VAT ID (should fall back to B2C)
-        $vatIdentityInvalid = VatIdentity::create([
+        $vatIdentityInvalid = VatIdentity::factory()->fresh()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE999999999',
             'status' => 'invalid',
-            'last_checked_at' => now(),
         ]);
 
         $clientInvalid = Client::factory()->create([

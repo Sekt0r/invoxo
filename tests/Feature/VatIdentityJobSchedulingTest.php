@@ -7,7 +7,6 @@ use App\Models\Client;
 use App\Models\Company;
 use App\Models\VatIdentity;
 use App\Services\VatIdentityResolver;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -24,12 +23,10 @@ class VatIdentityJobSchedulingTest extends TestCase
 
     public function test_repeated_triggers_in_short_time_do_not_enqueue_duplicates_for_pending(): void
     {
-
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->recentlyEnqueued()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'pending',
-            'last_enqueued_at' => now(), // Recently enqueued (within throttle period)
         ]);
 
         $resolver = new VatIdentityResolver();
@@ -56,12 +53,10 @@ class VatIdentityJobSchedulingTest extends TestCase
 
     public function test_repeated_triggers_enqueue_if_pending_but_old_enqueue(): void
     {
-
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->enqueuedLongAgo()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'pending',
-            'last_enqueued_at' => Carbon::now()->subMinutes(15), // Old enough to allow re-enqueue
         ]);
 
         $resolver = new VatIdentityResolver();
@@ -81,13 +76,10 @@ class VatIdentityJobSchedulingTest extends TestCase
 
     public function test_manual_recheck_forces_enqueue_when_allowed(): void
     {
-
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->fresh()->enqueuedLongAgo()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'valid',
-            'last_checked_at' => now(), // Fresh validation
-            'last_enqueued_at' => Carbon::now()->subMinutes(15), // Old enough to allow manual recheck
         ]);
 
         $resolver = new VatIdentityResolver();
@@ -98,21 +90,18 @@ class VatIdentityJobSchedulingTest extends TestCase
         $this->assertTrue($result);
         Queue::assertPushed(ValidateVatIdentityJob::class, 1);
 
-        // Verify last_enqueued_at was updated
+        // Verify last_enqueued_at was updated (should be very recent, within last minute)
         $vatIdentity->refresh();
         $this->assertNotNull($vatIdentity->last_enqueued_at);
-        $this->assertTrue($vatIdentity->last_enqueued_at->isAfter(Carbon::now()->subMinute()));
+        $this->assertTrue($vatIdentity->last_enqueued_at->isAfter(now()->subMinute()));
     }
 
     public function test_manual_recheck_respects_throttle(): void
     {
-
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->fresh()->recentlyEnqueued()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'valid',
-            'last_checked_at' => now(),
-            'last_enqueued_at' => Carbon::now()->subMinutes(5), // Too recent (within throttle period)
         ]);
 
         $resolver = new VatIdentityResolver();
@@ -123,20 +112,22 @@ class VatIdentityJobSchedulingTest extends TestCase
         $this->assertFalse($result);
         Queue::assertNotPushed(ValidateVatIdentityJob::class);
 
-        // last_enqueued_at should not be updated
+        // last_enqueued_at should not be updated (should still be ~5 minutes ago, not recent)
         $vatIdentity->refresh();
-        $this->assertTrue($vatIdentity->last_enqueued_at->isBefore(Carbon::now()->subMinutes(4)));
+        $expectedTime = now()->subMinutes(5);
+        // Allow small variance (within 1 second)
+        $this->assertTrue(
+            $vatIdentity->last_enqueued_at->diffInSeconds($expectedTime) < 1,
+            'last_enqueued_at should not have been updated'
+        );
     }
 
     public function test_manual_recheck_works_if_never_enqueued(): void
     {
-
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->fresh()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'valid',
-            'last_checked_at' => now(),
-            'last_enqueued_at' => null, // Never enqueued
         ]);
 
         $resolver = new VatIdentityResolver();
@@ -150,13 +141,10 @@ class VatIdentityJobSchedulingTest extends TestCase
 
     public function test_resolve_enqueues_if_stale_validation(): void
     {
-
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->stale()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'valid',
-            'last_checked_at' => Carbon::now()->subDays(31), // Stale (older than 30 days)
-            'last_enqueued_at' => null,
         ]);
 
         $resolver = new VatIdentityResolver();
@@ -179,13 +167,10 @@ class VatIdentityJobSchedulingTest extends TestCase
 
     public function test_resolve_does_not_enqueue_if_fresh_validation(): void
     {
-
-        $vatIdentity = VatIdentity::create([
+        $vatIdentity = VatIdentity::factory()->fresh()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
             'status' => 'valid',
-            'last_checked_at' => Carbon::now()->subDays(5), // Fresh (less than 30 days)
-            'last_enqueued_at' => null,
         ]);
 
         $resolver = new VatIdentityResolver();

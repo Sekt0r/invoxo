@@ -7,16 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class Invoice extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
         'company_id',
         'client_id',
@@ -40,11 +36,6 @@ class Invoice extends Model
         'seller_details',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -74,15 +65,21 @@ class Invoice extends Model
         return $this->belongsTo(Client::class);
     }
 
-//    public function public(): BelongsTo
-//    {
-//        return $this->belongsTo(Public::class);
-//    }
-
     public function invoiceItems(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
     }
+
+    private const IMMUTABLE_AFTER_DRAFT = [
+        'issue_date',
+        'seller_details',
+        'client_vat_status_snapshot',
+        'client_vat_id_snapshot',
+         'tax_treatment',
+         'vat_rate',
+         'vat_reason_text',
+         'vat_decided_at',
+    ];
 
     protected static function booted(): void
     {
@@ -92,6 +89,27 @@ class Invoice extends Model
             }
             if (empty($invoice->share_token)) {
                 $invoice->share_token = Str::random(48);
+            }
+        });
+
+        static::updating(function (Invoice $invoice) {
+            // Evaluate against the persisted status (original DB value)
+            $wasDraft = $invoice->getOriginal('status') === 'draft';
+
+            // Allow edits while the record is still draft (including the same update that changes status away from draft)
+            if ($wasDraft) {
+                return;
+            }
+
+            $dirty = array_keys($invoice->getDirty());
+            $blocked = array_values(array_intersect($dirty, self::IMMUTABLE_AFTER_DRAFT));
+
+            if (!empty($blocked)) {
+                throw ValidationException::withMessages([
+                    'invoice' => [
+                        'Invoice snapshot is immutable once status is not draft. Blocked fields: ' . implode(', ', $blocked),
+                    ],
+                ]);
             }
         });
     }

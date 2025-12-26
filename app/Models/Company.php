@@ -12,6 +12,12 @@ class Company extends Model
     use HasFactory;
 
     /**
+     * Transient flag used by observers.
+     * NOT persisted.
+     */
+    public bool $vatIntentChanged = false;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array

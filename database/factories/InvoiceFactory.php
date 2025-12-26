@@ -19,7 +19,6 @@ class InvoiceFactory extends Factory
             'client_id' => Client::factory(),
             'public_id' => (string) Str::uuid(),
             'share_token' => Str::random(48),
-            'number' => fake()->word(),
             'status' => 'draft',
             'currency' => 'EUR', // Default currency; should be set from bank accounts in real usage
             'issue_date' => fake()->date(),
