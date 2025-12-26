@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends Model
@@ -19,8 +20,16 @@ class Company extends Model
         'name',
         'country_code',
         'vat_id',
-        'base_currency',
+        'registration_number',
+        'tax_identifier',
+        'address_line1',
+        'address_line2',
+        'city',
+        'postal_code',
+        'vat_identity_id',
         'default_vat_rate',
+        'vat_override_enabled',
+        'vat_override_rate',
         'invoice_prefix',
     ];
 
@@ -33,13 +42,21 @@ class Company extends Model
     {
         return [
             'id' => 'integer',
+            'vat_identity_id' => 'integer',
             'default_vat_rate' => 'decimal:2',
+            'vat_override_enabled' => 'boolean',
+            'vat_override_rate' => 'decimal:2',
         ];
     }
 
     public function clients(): HasMany
     {
         return $this->hasMany(Client::class);
+    }
+
+    public function vatIdentity(): BelongsTo
+    {
+        return $this->belongsTo(VatIdentity::class);
     }
 
     public function invoices(): HasMany
@@ -50,5 +67,10 @@ class Company extends Model
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function bankAccounts(): HasMany
+    {
+        return $this->hasMany(BankAccount::class);
     }
 }

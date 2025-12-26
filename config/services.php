@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'vatlayer' => [
+        'base_url' => env('VATLAYER_BASE_URL', 'https://apilayer.net/api'),
+        'key' => env('VATLAYER_API_KEY'),
+    ],
+
 ];

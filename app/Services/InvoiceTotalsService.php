@@ -6,6 +6,10 @@ use App\Models\Invoice;
 
 final class InvoiceTotalsService
 {
+    /**
+     * Recalculate invoice totals from items.
+     * Minor unit assumed to be 2 decimals; extend later using ISO 4217 map if needed.
+     */
     public function recalculate(Invoice $invoice): void
     {
         $subtotal = 0;

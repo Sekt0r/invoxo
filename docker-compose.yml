@@ -1,0 +1,67 @@
+volumes:
+  pgdata:
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: invoxo
+      POSTGRES_USER: invoxo
+      POSTGRES_PASSWORD: invoxo_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invoxo -d invoxo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
+
+  app: &app-base
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8888:8888"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: true
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: invoxo
+      DB_USERNAME: invoxo
+      DB_PASSWORD: invoxo_password
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command:
+      sh -lc "
+        composer install &&
+        php artisan key:generate --force || true &&
+        php artisan octane:start --server=swoole --host=0.0.0.0 --port=8888
+      "
+
+  worker:
+    <<: *app-base
+    ports: []  # No ports needed for worker
+    command:
+      sh -lc "composer install && php artisan queue:work --sleep=1 --tries=3 --timeout=120 --max-time=3600"
+    restart: unless-stopped
+
+  scheduler:
+    <<: *app-base
+    ports: []  # No ports needed for scheduler
+    command:
+      sh -lc "composer install && php artisan schedule:work"
+    restart: unless-stopped
+
+
+
+

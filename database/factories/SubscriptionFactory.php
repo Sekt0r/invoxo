@@ -17,7 +17,7 @@ class SubscriptionFactory extends Factory
             'company_id' => Company::factory(),
             'plan_id' => Plan::factory(),
             'starts_at' => fake()->dateTime(),
-            'ends_at' => fake()->dateTime(),
+            'ends_at' => fake()->optional()->dateTime(),
         ];
     }
 }

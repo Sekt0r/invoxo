@@ -29,9 +29,15 @@ class Invoice extends Model
         'tax_treatment',
         'vat_rate',
         'vat_reason_text',
+        'vat_decided_at',
+        'client_vat_status_snapshot',
+        'client_vat_id_snapshot',
         'subtotal_minor',
         'vat_minor',
         'total_minor',
+        'currency',
+        'payment_details',
+        'seller_details',
     ];
 
     /**
@@ -48,9 +54,13 @@ class Invoice extends Model
             'issue_date' => 'date',
             'due_date' => 'date',
             'vat_rate' => 'decimal:2',
+            'vat_decided_at' => 'datetime',
             'subtotal_minor' => 'integer',
             'vat_minor' => 'integer',
             'total_minor' => 'integer',
+            'currency' => 'string',
+            'payment_details' => 'array',
+            'seller_details' => 'array',
         ];
     }
 

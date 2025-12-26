@@ -49,7 +49,6 @@ class RegisteredUserController extends Controller
             'name' => $user->name.' Company',
             'country_code' => 'RO',
             'vat_id' => null,
-            'base_currency' => 'EUR',
             'default_vat_rate' => 19.00,
             'invoice_prefix' => 'INV-',
         ]);

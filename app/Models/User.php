@@ -35,4 +35,17 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Company::class);
     }
+
+    /**
+     * Get the current request IP address for audit logging.
+     * Returns null if not in HTTP context (CLI, tests, etc.)
+     */
+    public function currentIp(): ?string
+    {
+        try {
+            return request()?->ip();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 }

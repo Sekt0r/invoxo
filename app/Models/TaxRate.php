@@ -18,7 +18,9 @@ class TaxRate extends Model
         'country_code',
         'tax_type',
         'standard_rate',
+        'reduced_rates',
         'source',
+        'fetched_at',
     ];
 
     /**
@@ -31,6 +33,8 @@ class TaxRate extends Model
         return [
             'id' => 'integer',
             'standard_rate' => 'decimal:2',
+            'reduced_rates' => 'array',
+            'fetched_at' => 'datetime',
         ];
     }
 }

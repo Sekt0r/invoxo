@@ -29,19 +29,22 @@ final class VatDecisionService
         $seller = strtoupper($company->country_code);
         $buyer = strtoupper($client->country_code);
 
+        // Get seller VAT rate (override -> official standard -> company default)
+        $sellerVatRate = $this->getSellerVatRate($company);
+
         // Domestic
         if ($buyer === $seller) {
             return new VatDecision(
                 taxTreatment: 'DOMESTIC',
-                vatRate: (float)$company->default_vat_rate,
+                vatRate: $sellerVatRate,
                 reasonText: null
             );
         }
 
         $buyerInEu = in_array($buyer, self::EU, true);
 
-        // Intra-EU B2B (reverse charge) - MVP assumes "VAT ID present == B2B"
-        if ($buyerInEu && !empty($client->vat_id)) {
+        // Intra-EU B2B (reverse charge) - requires valid VAT ID
+        if ($buyerInEu && !empty($client->vat_id) && $client->vatIdentity?->status === 'valid') {
             return new VatDecision(
                 taxTreatment: 'EU_B2B_RC',
                 vatRate: 0.0,
@@ -53,7 +56,7 @@ final class VatDecisionService
         if ($buyerInEu) {
             return new VatDecision(
                 taxTreatment: 'EU_B2C',
-                vatRate: (float)$company->default_vat_rate,
+                vatRate: $sellerVatRate,
                 reasonText: null
             );
         }
@@ -64,5 +67,28 @@ final class VatDecisionService
             vatRate: 0.0,
             reasonText: 'Outside EU VAT scope.'
         );
+    }
+
+    /**
+     * Get the seller VAT rate using: override -> official standard -> company default
+     *
+     * @param Company $company
+     * @return float
+     */
+    private function getSellerVatRate(Company $company): float
+    {
+        // Check if override is enabled
+        if ($company->vat_override_enabled && $company->vat_override_rate !== null) {
+            return (float)$company->vat_override_rate;
+        }
+
+        // Check for official standard rate from tax_rates table
+        $taxRate = \App\Models\TaxRate::where('country_code', strtoupper($company->country_code))->first();
+        if ($taxRate && $taxRate->standard_rate !== null) {
+            return (float)$taxRate->standard_rate;
+        }
+
+        // Fallback to company default
+        return (float)$company->default_vat_rate;
     }
 }

@@ -4,8 +4,8 @@ namespace Database\Factories;
 
 use App\Models\Client;
 use App\Models\Company;
-use App\Models\Public;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class InvoiceFactory extends Factory
 {
@@ -17,18 +17,19 @@ class InvoiceFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'client_id' => Client::factory(),
-            'public_id' => Public::factory(),
-            'share_token' => fake()->regexify('[A-Za-z0-9]{64}'),
+            'public_id' => (string) Str::uuid(),
+            'share_token' => Str::random(48),
             'number' => fake()->word(),
-            'status' => fake()->word(),
+            'status' => 'draft',
+            'currency' => 'EUR', // Default currency; should be set from bank accounts in real usage
             'issue_date' => fake()->date(),
             'due_date' => fake()->date(),
-            'tax_treatment' => fake()->word(),
-            'vat_rate' => fake()->randomFloat(2, 0, 999.99),
-            'vat_reason_text' => fake()->word(),
-            'subtotal_minor' => fake()->numberBetween(-100000, 100000),
-            'vat_minor' => fake()->numberBetween(-100000, 100000),
-            'total_minor' => fake()->numberBetween(-100000, 100000),
+            'tax_treatment' => 'DOMESTIC',
+            'vat_rate' => fake()->randomFloat(2, 0, 100),
+            'vat_reason_text' => fake()->optional()->sentence(),
+            'subtotal_minor' => fake()->numberBetween(0, 100000),
+            'vat_minor' => fake()->numberBetween(0, 100000),
+            'total_minor' => fake()->numberBetween(0, 100000),
         ];
     }
 }

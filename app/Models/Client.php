@@ -22,6 +22,17 @@ class Client extends Model
         'name',
         'country_code',
         'vat_id',
+        'registration_number',
+        'tax_identifier',
+        'address_line1',
+        'address_line2',
+        'city',
+        'postal_code',
+        'vat_identity_id',
+        'vat_validation_status',
+        'vat_validated_at',
+        'vat_validation_name',
+        'vat_validation_address',
     ];
 
     /**
@@ -34,12 +45,19 @@ class Client extends Model
         return [
             'id' => 'integer',
             'company_id' => 'integer',
+            'vat_identity_id' => 'integer',
+            'vat_validated_at' => 'datetime',
         ];
     }
 
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function vatIdentity(): BelongsTo
+    {
+        return $this->belongsTo(VatIdentity::class);
     }
 
     public function invoices(): HasMany
