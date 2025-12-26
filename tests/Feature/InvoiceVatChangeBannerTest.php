@@ -244,10 +244,11 @@ class InvoiceVatChangeBannerTest extends TestCase
         ]);
 
         // Issued invoice (banner should not show even if VAT changed)
+        // Create as draft first, add items, then update to issued (respects InvoiceItem immutability)
         $invoice = Invoice::factory()->create([
             'company_id' => $sellerCompany->id,
             'client_id' => $client->id,
-            'status' => 'issued',
+            'status' => 'draft',
             'vat_decided_at' => now()->subDay(),
             'client_vat_status_snapshot' => 'pending',
         ]);
@@ -258,6 +259,8 @@ class InvoiceVatChangeBannerTest extends TestCase
             'unit_price_minor' => 10000,
             'line_total_minor' => 10000,
         ]);
+
+        $invoice->update(['status' => 'issued', 'number' => 'INV-'.now()->year.'-000001']);
 
         $response = $this->actingAs($user)->get(route('invoices.show', $invoice));
 

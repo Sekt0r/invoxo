@@ -49,5 +49,7 @@ class AppServiceProvider extends ServiceProvider
         // Only observe created/updated events for BankAccount
         \App\Models\BankAccount::observe(\App\Observers\BankAccountObserver::class);
         \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
+        \App\Models\InvoiceItem::observe(\App\Observers\InvoiceItemObserver::class);
+        \App\Models\Client::observe(\App\Observers\ClientObserver::class);
     }
 }

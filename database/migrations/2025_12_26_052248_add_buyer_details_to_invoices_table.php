@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
-            $table->string('currency')->nullable()->change();
+            // Buyer/client snapshot captured at issue time
+            // JSON structure: client_name, country_code, vat_id, registration_number,
+            // tax_identifier, address_line1, address_line2, city, postal_code, captured_at
+            $table->json('buyer_details')->nullable()->after('seller_details');
         });
     }
 
@@ -22,13 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
-            $table->string('currency')->nullable(false)->change();
+            $table->dropColumn('buyer_details');
         });
     }
 };
-
-
-
-
-
-

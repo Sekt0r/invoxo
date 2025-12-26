@@ -42,22 +42,22 @@ class PlanLimitTest extends TestCase
         ]);
 
         // Create 2 issued invoices in current month
+        // Create as draft first, add items, then update to issued (respects InvoiceItem immutability)
         $issued1 = Invoice::factory()->create([
             'company_id' => $company->id,
             'client_id' => $client->id,
-            'status' => 'issued',
-            'issue_date' => now()->toDateString(),
+            'status' => 'draft',
         ]);
+        InvoiceItem::factory()->create(['invoice_id' => $issued1->id]);
+        $issued1->update(['status' => 'issued', 'issue_date' => now()->toDateString(), 'number' => 'INV-'.now()->year.'-000001']);
 
         $issued2 = Invoice::factory()->create([
             'company_id' => $company->id,
             'client_id' => $client->id,
-            'status' => 'issued',
-            'issue_date' => now()->toDateString(),
+            'status' => 'draft',
         ]);
-
-        InvoiceItem::factory()->create(['invoice_id' => $issued1->id]);
         InvoiceItem::factory()->create(['invoice_id' => $issued2->id]);
+        $issued2->update(['status' => 'issued', 'issue_date' => now()->toDateString(), 'number' => 'INV-'.now()->year.'-000002']);
 
         // Create a third draft invoice
         $draftInvoice = Invoice::factory()->create([
@@ -121,14 +121,15 @@ class PlanLimitTest extends TestCase
         ]);
 
         // Create many issued invoices (with valid VAT identities to avoid blocking)
+        // Create as draft first, add items, then update to issued (respects InvoiceItem immutability)
         for ($i = 0; $i < 10; $i++) {
             $invoice = Invoice::factory()->create([
                 'company_id' => $company->id,
                 'client_id' => $client->id,
-                'status' => 'issued',
-                'issue_date' => now()->toDateString(),
+                'status' => 'draft',
             ]);
             InvoiceItem::factory()->create(['invoice_id' => $invoice->id]);
+            $invoice->update(['status' => 'issued', 'issue_date' => now()->toDateString(), 'number' => 'INV-'.now()->year.'-'.str_pad((string)($i+1), 6, '0', STR_PAD_LEFT)]);
         }
 
         // Create another draft invoice

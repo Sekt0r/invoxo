@@ -18,21 +18,9 @@ class ActionRequiredInvoicesTest extends TestCase
         $company = $user->company;
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        $invoice1 = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'draft',
-            'number' => null,
-            'created_at' => now()->subDays(5),
-        ]);
+        $invoice1 = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'draft', 'number' => null, 'created_at' => now()->subDays(5),]);
 
-        $invoice2 = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'draft',
-            'number' => null,
-            'created_at' => now()->subDays(2),
-        ]);
+        $invoice2 = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'draft', 'number' => null, 'created_at' => now()->subDays(2),]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -40,9 +28,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $response->assertSee('Action Required');
         $response->assertSee('Draft', false);
         $response->assertViewHas('actionRequiredInvoices', function ($invoices) use ($invoice1, $invoice2) {
-            return $invoices->count() === 2
-                && $invoices->contains('id', $invoice1->id)
-                && $invoices->contains('id', $invoice2->id);
+            return $invoices->count() === 2 && $invoices->contains('id', $invoice1->id) && $invoices->contains('id', $invoice2->id);
         });
     }
 
@@ -52,13 +38,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $company = $user->company;
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        $invoice = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'issued',
-            'number' => 'INV-2025-001',
-            'issue_date' => now()->subDays(3),
-        ]);
+        $invoice = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'issued', 'number' => 'INV-2025-001', 'issue_date' => now()->subDays(3),]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -77,12 +57,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $company = $user->company;
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'paid',
-            'number' => 'INV-2025-001',
-        ]);
+        Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'paid', 'number' => 'INV-2025-001',]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -98,12 +73,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $company = $user->company;
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'voided',
-            'number' => 'INV-2025-001',
-        ]);
+        Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'voided', 'number' => 'INV-2025-001',]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -121,24 +91,15 @@ class ActionRequiredInvoicesTest extends TestCase
         $client1 = Client::factory()->create(['company_id' => $user1->company->id]);
         $client2 = Client::factory()->create(['company_id' => $user2->company->id]);
 
-        $invoice1 = Invoice::factory()->create([
-            'company_id' => $user1->company->id,
-            'client_id' => $client1->id,
-            'status' => 'draft',
-        ]);
+        $invoice1 = Invoice::factory()->create(['company_id' => $user1->company->id, 'client_id' => $client1->id, 'status' => 'draft',]);
 
-        $invoice2 = Invoice::factory()->create([
-            'company_id' => $user2->company->id,
-            'client_id' => $client2->id,
-            'status' => 'draft',
-        ]);
+        $invoice2 = Invoice::factory()->create(['company_id' => $user2->company->id, 'client_id' => $client2->id, 'status' => 'draft',]);
 
         $response = $this->actingAs($user1)->get(route('dashboard'));
 
         $response->assertOk();
         $response->assertViewHas('actionRequiredInvoices', function ($invoices) use ($invoice1, $invoice2) {
-            return $invoices->contains('id', $invoice1->id)
-                && !$invoices->contains('id', $invoice2->id);
+            return $invoices->contains('id', $invoice1->id) && !$invoices->contains('id', $invoice2->id);
         });
     }
 
@@ -149,38 +110,16 @@ class ActionRequiredInvoicesTest extends TestCase
         $client = Client::factory()->create(['company_id' => $company->id]);
 
         // Create unpaid invoice (older)
-        $unpaid1 = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'issued',
-            'number' => 'INV-2025-001',
-            'issue_date' => now()->subDays(10),
-        ]);
+        $unpaid1 = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'issued', 'number' => 'INV-2025-001', 'issue_date' => now()->subDays(10),]);
 
         // Create draft invoice (newer but should appear first)
-        $draft1 = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'draft',
-            'created_at' => now()->subDays(2),
-        ]);
+        $draft1 = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'draft', 'created_at' => now()->subDays(2),]);
 
         // Create another unpaid invoice (newer)
-        $unpaid2 = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'issued',
-            'number' => 'INV-2025-002',
-            'issue_date' => now()->subDays(5),
-        ]);
+        $unpaid2 = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'issued', 'number' => 'INV-2025-002', 'issue_date' => now()->subDays(5),]);
 
         // Create another draft invoice (older)
-        $draft2 = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'draft',
-            'created_at' => now()->subDays(8),
-        ]);
+        $draft2 = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'draft', 'created_at' => now()->subDays(8),]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -200,10 +139,7 @@ class ActionRequiredInvoicesTest extends TestCase
             }
 
             // Drafts should be before unpaid
-            return $draft2Index < $unpaid1Index
-                && $draft1Index < $unpaid1Index
-                && $draft2Index < $unpaid2Index
-                && $draft1Index < $unpaid2Index;
+            return $draft2Index < $unpaid1Index && $draft1Index < $unpaid1Index && $draft2Index < $unpaid2Index && $draft1Index < $unpaid2Index;
         });
     }
 
@@ -214,11 +150,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $client = Client::factory()->create(['company_id' => $company->id]);
 
         // Create 7 invoices
-        Invoice::factory()->count(7)->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'draft',
-        ]);
+        Invoice::factory()->count(7)->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'draft',]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -234,11 +166,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $company = $user->company;
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        $invoice = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'draft',
-        ]);
+        $invoice = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'draft',]);
 
         // Soft delete the client
         $client->delete();
@@ -269,11 +197,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $company = $user->company;
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        $invoice = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'draft',
-        ]);
+        $invoice = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'draft',]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -287,12 +211,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $company = $user->company;
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        $invoice = Invoice::factory()->create([
-            'company_id' => $company->id,
-            'client_id' => $client->id,
-            'status' => 'issued',
-            'number' => 'INV-2025-001',
-        ]);
+        $invoice = Invoice::factory()->create(['company_id' => $company->id, 'client_id' => $client->id, 'status' => 'issued', 'number' => 'INV-2025-001',]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
@@ -300,6 +219,7 @@ class ActionRequiredInvoicesTest extends TestCase
         $response->assertSee(route('invoices.show', $invoice));
     }
 }
+
 
 
 

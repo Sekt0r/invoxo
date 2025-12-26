@@ -30,7 +30,7 @@ class VatIdentitySharingTest extends TestCase
             'vat_id' => 'DE123456789', // Same VAT ID
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Resolve for company 1
         $vatIdentity1 = $resolver->resolveForCompany($company1);
@@ -69,7 +69,7 @@ class VatIdentitySharingTest extends TestCase
             'vat_id' => 'FR12345678901', // Same VAT ID as company
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Resolve for company
         $vatIdentityCompany = $resolver->resolveForCompany($company);
@@ -107,7 +107,7 @@ class VatIdentitySharingTest extends TestCase
             'vat_id' => 'DE123456789', // Same VAT ID
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Resolve for both companies (should share same vat_identity)
         $vatIdentity1 = $resolver->resolveForCompany($company1);
@@ -155,7 +155,7 @@ class VatIdentitySharingTest extends TestCase
             'vat_id' => 'DE123456789', // Same VAT ID
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Resolve for both (should share same vat_identity)
         $vatIdentityCompany = $resolver->resolveForCompany($company);
@@ -188,7 +188,7 @@ class VatIdentitySharingTest extends TestCase
             'vat_id' => 'DE123456789',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
         $vatIdentity = $resolver->resolveForCompany($company);
         $this->assertNotNull($vatIdentity);
 

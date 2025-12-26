@@ -49,11 +49,11 @@ class PublicInvoiceShareTest extends TestCase
             'company_id' => $company->id,
             'name' => 'Test Client',
         ]);
+        // Create as draft first, add items, then update to issued (respects InvoiceItem immutability)
         $invoice = Invoice::factory()->create([
             'company_id' => $company->id,
             'client_id' => $client->id,
-            'number' => 'INV-2025-000001',
-            'status' => 'issued',
+            'status' => 'draft',
         ]);
 
         InvoiceItem::factory()->create([
@@ -66,7 +66,7 @@ class PublicInvoiceShareTest extends TestCase
 
         $invoice->load('invoiceItems');
         app(InvoiceTotalsService::class)->recalculate($invoice);
-        $invoice->save();
+        $invoice->update(['status' => 'issued', 'number' => 'INV-2025-000001']);
 
         $response = $this->get(route('invoices.share', $invoice->public_id) . '?t=' . $invoice->share_token);
 

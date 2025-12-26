@@ -149,15 +149,13 @@ class DraftInvoiceRecomputeTest extends TestCase
         ]);
 
         // Create issued invoice (should not be touched)
+        // Create as draft first, add items, then update to issued (respects InvoiceItem immutability)
         $issuedInvoice = Invoice::factory()->create([
             'company_id' => $company->id,
             'client_id' => $client->id,
-            'status' => 'issued',
+            'status' => 'draft',
             'vat_rate' => 19.00,
             'tax_treatment' => 'DOMESTIC',
-            'subtotal_minor' => 10000,
-            'vat_minor' => 1900,
-            'total_minor' => 11900,
         ]);
 
         InvoiceItem::factory()->create([
@@ -165,6 +163,14 @@ class DraftInvoiceRecomputeTest extends TestCase
             'quantity' => 1.0,
             'unit_price_minor' => 10000,
             'line_total_minor' => 10000,
+        ]);
+
+        $issuedInvoice->update([
+            'status' => 'issued',
+            'subtotal_minor' => 10000,
+            'vat_minor' => 1900,
+            'total_minor' => 11900,
+            'number' => 'INV-'.now()->year.'-000001',
         ]);
 
         // Also create a draft invoice that should be updated

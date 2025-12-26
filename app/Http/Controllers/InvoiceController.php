@@ -469,6 +469,21 @@ class InvoiceController extends Controller
                 'captured_at' => now()->toIso8601String(),
             ];
 
+            // Store buyer/client details snapshot for immutability
+            $client = $invoice->client;
+            $invoice->buyer_details = [
+                'client_name' => $client->name,
+                'country_code' => $client->country_code,
+                'vat_id' => $client->vat_id,
+                'registration_number' => $client->registration_number,
+                'tax_identifier' => $client->tax_identifier,
+                'address_line1' => $client->address_line1,
+                'address_line2' => $client->address_line2,
+                'city' => $client->city,
+                'postal_code' => $client->postal_code,
+                'captured_at' => now()->toIso8601String(),
+            ];
+
             // Save once (all changes in same transaction)
             $invoice->save();
 

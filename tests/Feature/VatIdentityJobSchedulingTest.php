@@ -29,7 +29,7 @@ class VatIdentityJobSchedulingTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Try to resolve multiple times in quick succession
         $company = Company::factory()->create(['vat_id' => null]); // No VAT ID to avoid observer job
@@ -59,7 +59,7 @@ class VatIdentityJobSchedulingTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         $company = Company::factory()->create(['vat_id' => null]); // No VAT ID to avoid observer job
         $client = Client::factory()->create([
@@ -82,7 +82,7 @@ class VatIdentityJobSchedulingTest extends TestCase
             'status' => 'valid',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Manual recheck should force enqueue
         $result = $resolver->manualRecheck($vatIdentity);
@@ -104,7 +104,7 @@ class VatIdentityJobSchedulingTest extends TestCase
             'status' => 'valid',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Manual recheck should be throttled
         $result = $resolver->manualRecheck($vatIdentity);
@@ -130,7 +130,7 @@ class VatIdentityJobSchedulingTest extends TestCase
             'status' => 'valid',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Manual recheck should work if never enqueued
         $result = $resolver->manualRecheck($vatIdentity);
@@ -147,7 +147,7 @@ class VatIdentityJobSchedulingTest extends TestCase
             'status' => 'valid',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         $company = Company::factory()->create(['vat_id' => null]); // No VAT ID to avoid observer job
         $client = Client::factory()->create([
@@ -173,7 +173,7 @@ class VatIdentityJobSchedulingTest extends TestCase
             'status' => 'valid',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         $company = Company::factory()->create(['vat_id' => null]); // No VAT ID to avoid observer job
         $client = Client::factory()->create([

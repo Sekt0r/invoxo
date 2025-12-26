@@ -37,7 +37,7 @@ class VatIdentityTest extends TestCase
             'vat_id' => 'DE123456789',
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
         $vatIdentity = $resolver->resolveForClient($client);
 
         $this->assertNotNull($vatIdentity);
@@ -68,7 +68,7 @@ class VatIdentityTest extends TestCase
             'vat_id' => 'DE123456789', // Same VAT ID
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
 
         // Resolve for company
         $vatIdentityCompany = $resolver->resolveForCompany($company);
@@ -215,7 +215,7 @@ class VatIdentityTest extends TestCase
             'vat_identity_id' => $vatIdentity->id,
         ]);
 
-        $resolver = new VatIdentityResolver();
+        $resolver = app(VatIdentityResolver::class);
         $company->vat_id = '';
         $company->save();
 
