@@ -106,7 +106,7 @@ class InvoiceEditTest extends TestCase
         $user = User::factory()->create(['company_id' => $company->id]);
         $client = Client::factory()->create(['company_id' => $company->id]);
 
-        $invoice = Invoice::factory()->create([
+        $invoice = Invoice::factory()->issued()->create([
             'company_id' => $company->id,
             'client_id' => $client->id,
             'status' => 'issued',

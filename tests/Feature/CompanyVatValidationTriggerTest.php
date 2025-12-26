@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\ValidateVatIdentityJob;
 use App\Models\Company;
 use App\Models\VatIdentity;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
@@ -18,10 +19,20 @@ class CompanyVatValidationTriggerTest extends TestCase
     {
         parent::setUp();
 
+        // Freeze time for deterministic factory states
+        Carbon::setTestNow('2025-01-15 12:00:00');
+
         // Prevent real HTTP calls and ensure jobs are faked
         // FakeVatProvider is automatically used in testing environment, so Http::fake() not needed
         Queue::fake();
-        Bus::fake();
+        // Note: Do NOT fake Bus here - it interferes with Queue::fake() for queued jobs
+    }
+
+    protected function tearDown(): void
+    {
+        // Unfreeze time after each test
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_creating_company_with_vat_id_links_vat_identity(): void
@@ -60,8 +71,8 @@ class CompanyVatValidationTriggerTest extends TestCase
             'vat_id' => 'DE123456789',
         ]);
 
-        // Clear any jobs from creation by faking the queue again
-        Queue::fake();
+        // Record how many jobs were pushed before the update
+        $jobsBeforeUpdate = Queue::pushed(ValidateVatIdentityJob::class)->count();
 
         // Update company VAT ID to link to the stale vat_identity
         // Use update() which properly triggers change detection in observers
@@ -70,12 +81,18 @@ class CompanyVatValidationTriggerTest extends TestCase
         // Refresh to ensure vat_identity_id is set by observer
         $company->refresh();
 
-        // Debug assertions to diagnose why job isn't pushed
+        // Assertions
         $this->assertNotNull($company->vat_identity_id, 'vat_identity_id should be set');
         $this->assertEquals($vatIdentity->id, $company->vat_identity_id, 'vat_identity_id should match stale vat_identity');
 
-        // Should have enqueued validation job exactly once for stale vat_identity
-        Queue::assertPushed(ValidateVatIdentityJob::class, 1);
+        // Should have enqueued validation job exactly once for the stale vat_identity after the update
+        $jobsAfterUpdate = Queue::pushed(ValidateVatIdentityJob::class)->count();
+        $this->assertEquals($jobsBeforeUpdate + 1, $jobsAfterUpdate, 'Exactly one job should have been pushed after update');
+
+        // Verify the job was pushed with the correct vatIdentityId
+        Queue::assertPushed(ValidateVatIdentityJob::class, function ($job) use ($vatIdentity) {
+            return $job->vatIdentityId === $vatIdentity->id;
+        });
         Queue::assertPushed(ValidateVatIdentityJob::class, function ($job) use ($vatIdentity) {
             return $job->vatIdentityId === $vatIdentity->id;
         });

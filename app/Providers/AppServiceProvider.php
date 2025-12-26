@@ -48,5 +48,6 @@ class AppServiceProvider extends ServiceProvider
         // BankAccount delete auditing is handled in BankAccount::booted() method
         // Only observe created/updated events for BankAccount
         \App\Models\BankAccount::observe(\App\Observers\BankAccountObserver::class);
+        \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
     }
 }

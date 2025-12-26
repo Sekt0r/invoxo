@@ -57,7 +57,7 @@ class CompanyObserver
      */
     public function saved(Company $company): void
     {
-        // Check if VAT fields changed OR if vat_identity_id changed (which indicates VAT ID changed)
+        // Check if VAT fields changed (using transient flag set in saving())
         if (!($company->vatIntentChanged ?? false)) {
             return;
         }

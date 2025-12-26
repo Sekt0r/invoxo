@@ -11,6 +11,7 @@ use App\Models\InvoiceSequence;
 use App\Models\TaxRate;
 use App\Models\User;
 use App\Services\InvoiceNumberService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -18,6 +19,21 @@ use Tests\TestCase;
 class InvoiceSequenceNumberTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Freeze time for deterministic date-based sequencing
+        Carbon::setTestNow('2025-01-15 12:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        // Unfreeze time after each test
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     public function test_assigns_number_using_sequence_table(): void
     {
