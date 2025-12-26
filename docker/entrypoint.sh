@@ -29,17 +29,17 @@ wait_for_vendor() {
   return 1
 }
 
-wait_for_cache_table() {
-  # Requires vendor/autoload.php to exist first.
-  echo "Waiting for cache table..."
-  for i in {1..180}; do
-    php -r "require 'vendor/autoload.php'; \$app=require 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); exit(Illuminate\Support\Facades\Schema::hasTable('cache')?0:1);" \
-      && return 0 || true
+wait_for_migrations_done() {
+  echo "Waiting for pending migrations to be 0..."
+  for i in {1..300}; do
+    # 0 pending => grep finds "No migrations to run." and exits 0
+    php artisan migrate:status 2>/dev/null | grep -q "No migrations to run" && return 0 || true
     sleep 1
   done
-  echo "cache table not found."
+  echo "Timeout waiting for migrations to complete."
   return 1
 }
+
 
 # -----------------------------------------------------------------------------
 # Non-app roles: wait only, then run their command
@@ -48,7 +48,7 @@ if [[ "${ROLE}" != "app" ]]; then
   echo "Role=${ROLE}. Waiting for prerequisites..."
   wait_for_db
   wait_for_vendor
-  wait_for_cache_table
+  wait_for_migrations_done
 
   exec "$@"
 fi
