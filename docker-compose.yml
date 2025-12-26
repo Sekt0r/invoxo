@@ -31,6 +31,7 @@ services:
       - .env.docker
     environment:
       CONTAINER_ROLE: app
+      NPM_BUILD: "1"
     ports:
       - "8888:8888"
     volumes:
@@ -55,3 +56,4 @@ services:
       CONTAINER_ROLE: scheduler
     command: ["php", "artisan", "schedule:work"]
     restart: unless-stopped
+

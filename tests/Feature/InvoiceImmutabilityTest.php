@@ -218,3 +218,4 @@ class InvoiceImmutabilityTest extends TestCase
         $this->assertEquals(50000, $invoice->subtotal_minor);
     }
 }
+

@@ -28,3 +28,4 @@ class PublicInvoiceController extends Controller
         ]);
     }
 }
+

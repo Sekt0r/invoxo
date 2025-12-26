@@ -169,3 +169,4 @@ class InvoiceMoneyInputTest extends TestCase
         $this->assertEquals(2575, $item->unit_price_minor);
     }
 }
+

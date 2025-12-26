@@ -158,3 +158,4 @@ ports:
 - Verify build output shows `swoole` installation
 - Check Dockerfile includes Swoole installation steps
 - Rebuild image: `docker compose build --no-cache`
+

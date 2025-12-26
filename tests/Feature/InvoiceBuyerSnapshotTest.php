@@ -257,3 +257,4 @@ class InvoiceBuyerSnapshotTest extends TestCase
         $response->assertOk();
     }
 }
+

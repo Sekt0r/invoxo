@@ -227,3 +227,4 @@ class InvoiceItemImmutabilityTest extends TestCase
         $item->update(['description' => 'Modified']);
     }
 }
+

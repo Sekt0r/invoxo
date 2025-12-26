@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\VatRatesSyncService;
+use App\Jobs\SyncVatRatesJob;
 use Illuminate\Console\Command;
 
 class SyncVatRatesCommand extends Command
@@ -12,7 +12,7 @@ class SyncVatRatesCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'vat:sync-rates';
+    protected $signature = 'vat:sync-rates {--sync : Execute sync immediately instead of dispatching to queue}';
 
     /**
      * The console command description.
@@ -24,22 +24,27 @@ class SyncVatRatesCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(VatRatesSyncService $syncService): int
+    public function handle(): int
     {
-        $this->info('Syncing VAT rates from VATlayer...');
+        if ($this->option('sync')) {
+            $this->info('Executing VAT rates sync synchronously...');
+            try {
+                $job = new SyncVatRatesJob();
+                $job->handle(app(\App\Services\VatRatesSyncService::class));
+                $this->info('VAT rates sync completed successfully.');
 
-        $result = $syncService->syncAll();
+                return Command::SUCCESS;
+            } catch (\Exception $e) {
+                $this->error('Failed to sync VAT rates: ' . $e->getMessage());
 
-        if ($result['success']) {
-            $this->info("Successfully synced {$result['synced']} VAT rates.");
-            return Command::SUCCESS;
+                return Command::FAILURE;
+            }
         }
 
-        $this->error('Failed to sync VAT rates:');
-        foreach ($result['errors'] as $error) {
-            $this->error("  - {$error}");
-        }
+        $this->info('Dispatching VAT rates sync job to queue...');
+        SyncVatRatesJob::dispatch();
+        $this->info('Job dispatched successfully.');
 
-        return Command::FAILURE;
+        return Command::SUCCESS;
     }
 }

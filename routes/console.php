@@ -9,12 +9,11 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('vat:sync-rates')
-    ->dailyAt('03:30')
+    ->dailyAt('03:00')
     ->withoutOverlapping()
     ->onOneServer();
 
 Schedule::command('fx:sync-ecb')
-    ->dailyAt('16:30')
-    ->timezone('Europe/Bucharest')
+    ->dailyAt('06:00')
     ->withoutOverlapping()
     ->onOneServer();

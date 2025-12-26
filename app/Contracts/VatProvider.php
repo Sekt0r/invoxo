@@ -21,3 +21,4 @@ interface VatProvider
      */
     public function rateList(?string $countryCode = null): array;
 }
+

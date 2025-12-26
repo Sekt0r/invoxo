@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\EcbFxRatesService;
+use App\Jobs\SyncEcbFxRatesJob;
 use Illuminate\Console\Command;
 
 class SyncEcbFxRatesCommand extends Command
@@ -12,7 +12,7 @@ class SyncEcbFxRatesCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'fx:sync-ecb';
+    protected $signature = 'fx:sync-ecb {--sync : Execute sync immediately instead of dispatching to queue}';
 
     /**
      * The console command description.
@@ -24,22 +24,27 @@ class SyncEcbFxRatesCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(EcbFxRatesService $service): int
+    public function handle(): int
     {
-        $this->info('Syncing FX rates from ECB...');
+        if ($this->option('sync')) {
+            $this->info('Executing FX rates sync synchronously...');
+            try {
+                $job = new SyncEcbFxRatesJob();
+                $job->handle(app(\App\Services\EcbFxRatesService::class));
+                $this->info('FX rates sync completed successfully.');
 
-        try {
-            $result = $service->syncDaily();
+                return Command::SUCCESS;
+            } catch (\Exception $e) {
+                $this->error('Failed to sync FX rates: ' . $e->getMessage());
 
-            $this->info("Successfully synced FX rates for {$result['as_of_date']}.");
-            $this->info("  Inserted: {$result['inserted']} rates");
-            $this->info("  Updated: {$result['updated']} rates");
-
-            return Command::SUCCESS;
-        } catch (\Exception $e) {
-            $this->error('Failed to sync FX rates: ' . $e->getMessage());
-
-            return Command::FAILURE;
+                return Command::FAILURE;
+            }
         }
+
+        $this->info('Dispatching FX rates sync job to queue...');
+        SyncEcbFxRatesJob::dispatch();
+        $this->info('Job dispatched successfully.');
+
+        return Command::SUCCESS;
     }
 }

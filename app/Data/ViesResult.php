@@ -14,3 +14,4 @@ final readonly class ViesResult
     ) {
     }
 }
+

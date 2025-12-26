@@ -20,3 +20,4 @@ interface VatRatesProviderInterface
      */
     public function getAllRates(string $countryCode): array;
 }
+

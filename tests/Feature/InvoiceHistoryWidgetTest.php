@@ -369,3 +369,4 @@ class InvoiceHistoryWidgetTest extends TestCase
         });
     }
 }
+

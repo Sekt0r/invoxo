@@ -15,3 +15,4 @@ interface VatValidationProviderInterface
      */
     public function validate(string $countryCode, string $vatId): VatValidationResult;
 }
+

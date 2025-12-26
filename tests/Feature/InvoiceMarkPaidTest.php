@@ -72,3 +72,4 @@ class InvoiceMarkPaidTest extends TestCase
         $this->assertEquals('issued', $invoiceB->status);
     }
 }
+

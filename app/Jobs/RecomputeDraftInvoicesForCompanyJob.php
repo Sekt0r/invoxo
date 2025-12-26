@@ -90,3 +90,4 @@ class RecomputeDraftInvoicesForCompanyJob implements ShouldQueue
         return [60, 300, 900]; // 1 minute, 5 minutes, 15 minutes
     }
 }
+
