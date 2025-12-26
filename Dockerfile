@@ -31,4 +31,4 @@ RUN chmod +x /usr/local/bin/entrypoint
 
 EXPOSE 8888
 ENTRYPOINT ["entrypoint"]
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8888"]
+CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8888", "--watch"]
