@@ -21,8 +21,6 @@ class CompanySettingsController extends Controller
         // Check if official tax rate exists for company's country
         $officialTaxRate = TaxRate::where('country_code', strtoupper($company->country_code))->first();
 
-        $company->load('bankAccounts');
-
         return view('settings.company', [
             'company' => $company,
             'resolvedRate' => $resolvedRate,

@@ -146,6 +146,35 @@
                                 @endif
                             </div>
 
+                            {{-- Address Section --}}
+                            <div class="border-t pt-6 mt-6">
+                                <h3 class="text-sm font-semibold text-gray-700 mb-4">Address</h3>
+
+                                <div>
+                                    <x-input-label for="address_line1" :value="__('Address Line 1')" />
+                                    <x-text-input id="address_line1" name="address_line1" type="text" class="mt-1 block w-full" :value="old('address_line1', $company->address_line1)" required maxlength="255" />
+                                    <x-input-error class="mt-2" :messages="$errors->get('address_line1')" />
+                                </div>
+
+                                <div class="mt-4">
+                                    <x-input-label for="address_line2" :value="__('Address Line 2 (Optional)')" />
+                                    <x-text-input id="address_line2" name="address_line2" type="text" class="mt-1 block w-full" :value="old('address_line2', $company->address_line2)" maxlength="255" />
+                                    <x-input-error class="mt-2" :messages="$errors->get('address_line2')" />
+                                </div>
+
+                                <div class="mt-4">
+                                    <x-input-label for="city" :value="__('City')" />
+                                    <x-text-input id="city" name="city" type="text" class="mt-1 block w-full" :value="old('city', $company->city)" required maxlength="255" />
+                                    <x-input-error class="mt-2" :messages="$errors->get('city')" />
+                                </div>
+
+                                <div class="mt-4">
+                                    <x-input-label for="postal_code" :value="__('Postal Code')" />
+                                    <x-text-input id="postal_code" name="postal_code" type="text" class="mt-1 block w-full" :value="old('postal_code', $company->postal_code)" required maxlength="32" />
+                                    <x-input-error class="mt-2" :messages="$errors->get('postal_code')" />
+                                </div>
+                            </div>
+
                             {{-- Standard VAT Rate Section --}}
                             @if(isset($officialTaxRate) && $officialTaxRate->standard_rate !== null)
                                 {{-- Official rate exists: show read-only --}}
@@ -211,38 +240,6 @@
                                 <x-text-input id="invoice_prefix" name="invoice_prefix" type="text" class="mt-1 block w-full" :value="old('invoice_prefix', $company->invoice_prefix)" required maxlength="12" />
                                 <x-input-error class="mt-2" :messages="$errors->get('invoice_prefix')" />
                                 <p class="mt-1 text-xs text-gray-500">Prefix for invoice numbers (e.g., INV or INV-)</p>
-                            </div>
-
-
-                            {{-- Bank Accounts Section --}}
-                            <div class="border-t pt-6 mt-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-sm font-semibold text-gray-700">Bank Accounts</h3>
-                                    <a href="{{ route('bank-accounts.create') }}" class="text-sm text-indigo-600 hover:text-indigo-900">Add bank account</a>
-                                </div>
-
-                                @if($company->bankAccounts->isEmpty())
-                                    <p class="text-sm text-gray-500">No bank accounts configured. Add one to include payment details on invoices.</p>
-                                @else
-                                    <div class="space-y-3">
-                                        @foreach($company->bankAccounts as $account)
-                                            <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-md">
-                                                <div>
-                                                    <div class="font-medium text-gray-900">{{ $account->display_name }}</div>
-                                                    <div class="text-sm text-gray-600">{{ $account->currency }} • {{ $account->iban }}</div>
-                                                </div>
-                                                <div class="flex items-center gap-2">
-                                                    <a href="{{ route('bank-accounts.edit', $account) }}" class="text-sm text-indigo-600 hover:text-indigo-900">Edit</a>
-                                                    <form method="POST" action="{{ route('bank-accounts.destroy', $account) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this bank account?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="text-sm text-red-600 hover:text-red-900">Delete</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
                             </div>
 
                             <div class="flex items-center gap-4">
