@@ -94,10 +94,6 @@ wait_for_db
     php artisan migrate
     php artisan config:clear || true
     php artisan cache:clear  || true
-
-    php artisan migrate --env=testing
-    php artisan config:clear --env=testing || true
-    php artisan cache:clear --env=testing || true
   fi
 
 ) 9>"${LOCK_FILE}"
