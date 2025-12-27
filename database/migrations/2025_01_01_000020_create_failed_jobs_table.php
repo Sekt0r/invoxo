@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('vat_rate_overrides', function (Blueprint $table) {
+        Schema::create('failed_jobs', function (Blueprint $table) {
             $table->id();
-            $table->char('country_code', 2)->unique();
-            $table->decimal('standard_rate', 5, 2);
-            $table->text('note')->nullable();
-            $table->timestamps();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->text('payload');
+            $table->text('exception');
+            $table->timestamp('failed_at')->useCurrent();
         });
     }
 
@@ -25,6 +27,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('vat_rate_overrides');
+        Schema::dropIfExists('failed_jobs');
     }
 };
+

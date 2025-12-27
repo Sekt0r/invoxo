@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->json('payment_details')->nullable()->after('currency');
+        Schema::create('cache', function (Blueprint $table) {
+            $table->string('key', 255)->primary();
+            $table->text('value');
+            $table->integer('expiration');
         });
     }
 
@@ -21,8 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->dropColumn('payment_details');
-        });
+        Schema::dropIfExists('cache');
     }
 };
+

@@ -4,28 +4,26 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::disableForeignKeyConstraints();
-
         Schema::create('bank_accounts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->char('currency', 3)->notNull();
-            $table->string('iban')->notNull();
+            $table->unsignedBigInteger('company_id');
+            $table->char('currency', 3);
+            $table->string('iban');
             $table->string('nickname')->nullable();
             $table->timestamps();
+            $table->boolean('is_default')->default(false);
+            $table->timestamp('deleted_at')->nullable();
 
-            $table->unique(['company_id', 'currency', 'iban']);
             $table->index('company_id');
+            $table->unique(['company_id', 'currency', 'iban']);
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
         });
-
-        Schema::enableForeignKeyConstraints();
     }
 
     /**
@@ -36,3 +34,4 @@ return new class extends Migration
         Schema::dropIfExists('bank_accounts');
     }
 };
+

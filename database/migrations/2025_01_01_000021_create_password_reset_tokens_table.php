@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('companies', function (Blueprint $table) {
-            $table->dropColumn('base_currency');
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email', 255)->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
         });
     }
 
@@ -21,9 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('companies', function (Blueprint $table) {
-            $table->char('base_currency', 3)->default('EUR')->after('country_code');
-        });
+        Schema::dropIfExists('password_reset_tokens');
     }
 };
 

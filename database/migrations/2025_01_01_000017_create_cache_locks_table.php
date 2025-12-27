@@ -11,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tax_rates', function (Blueprint $table) {
-            $table->json('reduced_rates')->nullable()->after('standard_rate');
-            $table->timestamp('fetched_at')->nullable()->after('source');
+        Schema::create('cache_locks', function (Blueprint $table) {
+            $table->string('key', 255)->primary();
+            $table->string('owner', 255);
+            $table->integer('expiration');
         });
     }
 
@@ -22,8 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tax_rates', function (Blueprint $table) {
-            $table->dropColumn(['reduced_rates', 'fetched_at']);
-        });
+        Schema::dropIfExists('cache_locks');
     }
 };
+

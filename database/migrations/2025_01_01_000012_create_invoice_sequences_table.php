@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,14 +12,14 @@ return new class extends Migration
     {
         Schema::create('invoice_sequences', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('company_id');
             $table->integer('year');
             $table->string('prefix', 32);
             $table->integer('last_number')->default(0);
             $table->timestamps();
 
-            // Unique constraint: one sequence per company/year/prefix combination
             $table->unique(['company_id', 'year', 'prefix']);
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
         });
     }
 
@@ -32,3 +31,4 @@ return new class extends Migration
         Schema::dropIfExists('invoice_sequences');
     }
 };
+

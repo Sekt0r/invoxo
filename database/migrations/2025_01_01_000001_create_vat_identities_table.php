@@ -13,16 +13,19 @@ return new class extends Migration
     {
         Schema::create('vat_identities', function (Blueprint $table) {
             $table->id();
-            $table->char('country_code', 2);
-            $table->string('vat_id');
-            $table->string('status'); // valid|invalid|unknown|pending
-            $table->timestamp('validated_at')->nullable();
+            $table->char('country_code', 2)->notNull();
+            $table->string('vat_id')->notNull();
+            $table->string('status')->notNull();
+            $table->timestamp('last_checked_at')->nullable();
             $table->string('name')->nullable();
             $table->text('address')->nullable();
             $table->text('last_error')->nullable();
+            $table->string('source')->nullable();
+            $table->json('provider_metadata')->nullable();
+            $table->timestamp('status_updated_at')->nullable();
+            $table->timestamp('last_enqueued_at')->nullable();
             $table->timestamps();
 
-            // Unique index on country_code + vat_id
             $table->unique(['country_code', 'vat_id']);
         });
     }
@@ -35,3 +38,4 @@ return new class extends Migration
         Schema::dropIfExists('vat_identities');
     }
 };
+

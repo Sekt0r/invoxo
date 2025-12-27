@@ -4,25 +4,22 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::disableForeignKeyConstraints();
-
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained();
-            $table->foreignId('plan_id')->constrained();
+            $table->unsignedBigInteger('company_id');
+            $table->string('plan'); // 'starter' | 'pro' | 'business'
             $table->timestamp('starts_at');
             $table->timestamp('ends_at')->nullable();
             $table->timestamps();
-        });
 
-        Schema::enableForeignKeyConstraints();
+            $table->foreign('company_id')->references('id')->on('companies');
+        });
     }
 
     /**
@@ -33,3 +30,4 @@ return new class extends Migration
         Schema::dropIfExists('subscriptions');
     }
 };
+

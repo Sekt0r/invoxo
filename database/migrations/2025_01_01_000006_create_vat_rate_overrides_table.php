@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('plans', function (Blueprint $table) {
+        Schema::create('vat_rate_overrides', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique();
-            $table->string('name');
-            $table->integer('monthly_price_eur');
-            $table->integer('invoice_monthly_limit')->nullable();
+            $table->char('country_code', 2);
+            $table->decimal('standard_rate', 5, 2);
+            $table->text('note')->nullable();
             $table->timestamps();
+
+            $table->unique('country_code');
         });
     }
 
@@ -26,6 +27,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('plans');
+        Schema::dropIfExists('vat_rate_overrides');
     }
 };
+

@@ -4,32 +4,29 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::disableForeignKeyConstraints();
-
         Schema::create('invoice_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained()->onDelete('cascade');
-            $table->foreignId('invoice_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('event_type'); // 'issued', 'status_changed', 'draft_updated'
+            $table->unsignedBigInteger('company_id');
+            $table->unsignedBigInteger('invoice_id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('event_type');
             $table->string('from_status')->nullable();
             $table->string('to_status')->nullable();
             $table->text('message')->nullable();
             $table->json('meta_json')->nullable();
             $table->timestamps();
 
-            // Index for efficient queries
             $table->index(['company_id', 'invoice_id', 'created_at']);
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
+            $table->foreign('invoice_id')->references('id')->on('invoices')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
-
-        Schema::enableForeignKeyConstraints();
     }
 
     /**
@@ -40,3 +37,4 @@ return new class extends Migration
         Schema::dropIfExists('invoice_events');
     }
 };
+

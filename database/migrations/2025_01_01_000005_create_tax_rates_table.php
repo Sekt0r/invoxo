@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('companies', function (Blueprint $table) {
+        Schema::create('tax_rates', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
             $table->char('country_code', 2);
-            $table->string('vat_id')->nullable();
-            $table->char('base_currency', 3)->default('EUR');
-            $table->decimal('default_vat_rate', 5, 2)->default(0);
-            $table->string('invoice_prefix')->default('INV-');
+            $table->string('tax_type')->default('vat');
+            $table->decimal('standard_rate', 5, 2)->default('0');
+            $table->string('source')->nullable();
+            $table->json('reduced_rates')->nullable();
+            $table->timestamp('fetched_at')->nullable();
             $table->timestamps();
+
+            $table->unique('country_code');
         });
     }
 
@@ -28,6 +30,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('companies');
+        Schema::dropIfExists('tax_rates');
     }
 };
+

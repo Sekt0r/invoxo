@@ -11,19 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::disableForeignKeyConstraints();
-
-        Schema::create('clients', function (Blueprint $table) {
+        Schema::create('plans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->constrained();
+            $table->string('code');
             $table->string('name');
-            $table->char('country_code', 2);
-            $table->string('vat_id')->nullable();
+            $table->integer('monthly_price_eur');
+            $table->integer('invoice_monthly_limit')->nullable();
             $table->timestamps();
-            $table->softDeletes();
-        });
 
-        Schema::enableForeignKeyConstraints();
+            $table->unique('code');
+        });
     }
 
     /**
@@ -31,6 +28,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('clients');
+        Schema::dropIfExists('plans');
     }
 };
+
