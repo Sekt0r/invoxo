@@ -19,8 +19,11 @@ class CompanyVatOverrideTest extends TestCase
         Queue::fake(); // Prevent actual job execution
     }
 
-    public function test_country_change_resets_default_rate_when_override_disabled(): void
+    public function test_country_change_does_not_auto_update_default_rate(): void
     {
+        // Note: default_vat_rate is always user-editable and never auto-updated on country change
+        // This ensures users maintain control over their country VAT rate setting
+
         // Create a tax rate for the new country
         TaxRate::create([
             'country_code' => 'FR',
@@ -47,16 +50,16 @@ class CompanyVatOverrideTest extends TestCase
             'address_line1' => $company->address_line1 ?? '123 Street',
             'city' => $company->city ?? 'City',
             'postal_code' => $company->postal_code ?? '12345',
-            'default_vat_rate' => $company->default_vat_rate, // This should be overridden
+            'default_vat_rate' => $company->default_vat_rate, // User-provided, not auto-updated
             'invoice_prefix' => $company->invoice_prefix,
         ]);
 
         $response->assertRedirect(route('settings.company.edit'));
 
-        // Assert default_vat_rate was updated to FR's standard rate
+        // Assert default_vat_rate remains user-provided (not auto-updated to FR's official rate)
         $company->refresh();
         $this->assertEquals('FR', $company->country_code);
-        $this->assertEquals(20.00, (float)$company->default_vat_rate);
+        $this->assertEquals(19.00, (float)$company->default_vat_rate); // Preserved, not auto-updated
         $this->assertFalse($company->vat_override_enabled);
     }
 
@@ -206,8 +209,11 @@ class CompanyVatOverrideTest extends TestCase
         $this->assertEquals(25.00, $decision->vatRate);
     }
 
-    public function test_vat_decision_uses_official_rate_when_override_disabled(): void
+    public function test_vat_decision_uses_default_rate_when_override_disabled(): void
     {
+        // Note: default_vat_rate is the baseline (country VAT rate), not tax_rates table
+        // Official rates from tax_rates are informational only, not used for VAT calculation
+
         TaxRate::create([
             'country_code' => 'DE',
             'tax_type' => 'vat',
@@ -217,7 +223,7 @@ class CompanyVatOverrideTest extends TestCase
 
         $company = Company::factory()->create([
             'country_code' => 'DE',
-            'default_vat_rate' => 18.00, // Different from official rate
+            'default_vat_rate' => 18.00, // Company's country VAT rate (baseline)
             'vat_override_enabled' => false,
             'vat_override_rate' => null,
         ]);
@@ -230,9 +236,9 @@ class CompanyVatOverrideTest extends TestCase
         $decisionService = new \App\Services\VatDecisionService();
         $decision = $decisionService->decide($company, $client);
 
-        // Should use official standard rate (19.00) not company default (18.00)
+        // Should use company default_vat_rate (18.00), which represents the country VAT rate
         $this->assertEquals('DOMESTIC', $decision->taxTreatment);
-        $this->assertEquals(19.00, $decision->vatRate);
+        $this->assertEquals(18.00, $decision->vatRate);
     }
 
     public function test_vat_decision_falls_back_to_default_when_no_official_rate(): void

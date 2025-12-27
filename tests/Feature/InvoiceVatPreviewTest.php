@@ -123,6 +123,14 @@ class InvoiceVatPreviewTest extends TestCase
         ]);
         $user = User::factory()->create(['company_id' => $company->id]);
 
+        // User needs Pro plan for VIES validation (required for EU_B2B_RC auto-suggestion)
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
         $vatIdentity = VatIdentity::create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',

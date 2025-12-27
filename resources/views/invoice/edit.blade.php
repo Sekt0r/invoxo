@@ -56,14 +56,36 @@
                             <div id="vat-preview-panel" class="p-4 bg-gray-50 border border-gray-300 rounded-md" style="display: none;">
                                 <h3 class="text-sm font-semibold text-gray-700 mb-3">VAT Preview</h3>
                                 <div id="vat-preview-content">
-                                    <div class="space-y-2 text-sm">
+                                    <div class="space-y-3 text-sm">
                                         <div>
-                                            <span class="font-medium text-gray-600">Tax Treatment:</span>
-                                            <span id="vat-preview-treatment" class="ml-2 text-gray-900"></span>
+                                            <div class="flex items-center justify-between">
+                                                <span class="font-medium text-gray-600">Tax Treatment:</span>
+                                                <span id="vat-preview-treatment" class="ml-2 text-gray-900"></span>
+                                            </div>
+                                            {{-- Tax Treatment Manual Override Warning --}}
+                                            @if($invoice->status === 'draft' && $invoice->tax_treatment_is_manual)
+                                                <div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                                                    <p class="text-yellow-800 mb-1">Manual tax treatment applied. Automatic suggestions disabled.</p>
+                                                    <button type="button" id="tax-treatment-reset-btn" class="text-yellow-700 hover:text-yellow-900 underline text-xs">
+                                                        Reset tax treatment to automatic
+                                                    </button>
+                                                </div>
+                                            @endif
                                         </div>
                                         <div>
-                                            <span class="font-medium text-gray-600">VAT Rate:</span>
-                                            <span id="vat-preview-rate" class="ml-2 text-gray-900"></span>
+                                            <div class="flex items-center justify-between">
+                                                <span class="font-medium text-gray-600">VAT Rate:</span>
+                                                <span id="vat-preview-rate" class="ml-2 text-gray-900"></span>
+                                            </div>
+                                            {{-- VAT Rate Manual Override Warning --}}
+                                            @if($invoice->status === 'draft' && $invoice->vat_rate_is_manual)
+                                                <div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                                                    <p class="text-yellow-800 mb-1">Manual VAT rate applied. Automatic updates disabled.</p>
+                                                    <button type="button" id="vat-rate-reset-btn" class="text-yellow-700 hover:text-yellow-900 underline text-xs">
+                                                        Reset VAT rate to automatic
+                                                    </button>
+                                                </div>
+                                            @endif
                                         </div>
                                         <div id="vat-preview-reason" style="display: none;">
                                             <span class="font-medium text-gray-600">Reason:</span>
@@ -231,6 +253,45 @@
 @if($invoice->status === 'draft')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle separate reset buttons
+    const invoiceForm = document.querySelector('form[method="POST"]');
+
+    // VAT Rate Reset
+    const vatRateResetBtn = document.getElementById('vat-rate-reset-btn');
+    if (vatRateResetBtn && invoiceForm) {
+        vatRateResetBtn.addEventListener('click', function() {
+            // Create or update hidden field
+            let vatRateResetField = document.getElementById('vat-rate-reset-field');
+            if (!vatRateResetField) {
+                vatRateResetField = document.createElement('input');
+                vatRateResetField.type = 'hidden';
+                vatRateResetField.id = 'vat-rate-reset-field';
+                vatRateResetField.name = 'vat_rate_reset';
+                invoiceForm.appendChild(vatRateResetField);
+            }
+            vatRateResetField.value = '1';
+            invoiceForm.submit();
+        });
+    }
+
+    // Tax Treatment Reset
+    const taxTreatmentResetBtn = document.getElementById('tax-treatment-reset-btn');
+    if (taxTreatmentResetBtn && invoiceForm) {
+        taxTreatmentResetBtn.addEventListener('click', function() {
+            // Create or update hidden field
+            let taxTreatmentResetField = document.getElementById('tax-treatment-reset-field');
+            if (!taxTreatmentResetField) {
+                taxTreatmentResetField = document.createElement('input');
+                taxTreatmentResetField.type = 'hidden';
+                taxTreatmentResetField.id = 'tax-treatment-reset-field';
+                taxTreatmentResetField.name = 'tax_treatment_reset';
+                invoiceForm.appendChild(taxTreatmentResetField);
+            }
+            taxTreatmentResetField.value = '1';
+            invoiceForm.submit();
+        });
+    }
+
     const clientSelect = document.getElementById('client_id');
     const currencySelect = document.getElementById('currency');
     const paymentAccountsList = document.getElementById('payment-accounts-list');

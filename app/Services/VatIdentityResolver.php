@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\User;
 use App\Models\VatIdentity;
 use App\Support\VatId;
 
@@ -14,7 +15,7 @@ class VatIdentityResolver
     ) {
     }
 
-    public function resolveForClient(Client $client): ?VatIdentity
+    public function resolveForClient(Client $client, ?User $user = null): ?VatIdentity
     {
         if (empty($client->vat_id)) {
             $client->update(['vat_identity_id' => null]);
@@ -39,8 +40,10 @@ class VatIdentityResolver
 
         $client->update(['vat_identity_id' => $vatIdentity->id]);
 
-        // Dispatch validation job if needed (atomic CAS via shared service)
-        $this->enqueuer->enqueueIfStaleAndNotThrottled($vatIdentity->id);
+        // Dispatch VIES validation job ONLY if user has permission
+        if ($user && $user->hasPlanPermission('vies_validation')) {
+            $this->enqueuer->enqueueIfStaleAndNotThrottled($vatIdentity->id);
+        }
 
         // Refresh again to get updated last_enqueued_at if it was set
         $vatIdentity->refresh();
@@ -48,7 +51,7 @@ class VatIdentityResolver
         return $vatIdentity;
     }
 
-    public function resolveForCompany(Company $company): ?VatIdentity
+    public function resolveForCompany(Company $company, ?User $user = null): ?VatIdentity
     {
         if (empty($company->vat_id)) {
             $company->update(['vat_identity_id' => null]);
@@ -73,8 +76,12 @@ class VatIdentityResolver
 
         $company->update(['vat_identity_id' => $vatIdentity->id]);
 
-        // Dispatch validation job if needed (atomic CAS via shared service)
-        $this->enqueuer->enqueueIfStaleAndNotThrottled($vatIdentity->id);
+        // Dispatch VIES validation job ONLY if user has permission
+        // If user not provided, check auth()->user() (for observer/service calls)
+        $effectiveUser = $user ?? auth()->user();
+        if ($effectiveUser instanceof User && $effectiveUser->hasPlanPermission('vies_validation')) {
+            $this->enqueuer->enqueueIfStaleAndNotThrottled($vatIdentity->id);
+        }
 
         // Refresh again to get updated last_enqueued_at if it was set
         $vatIdentity->refresh();

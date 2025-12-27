@@ -56,16 +56,22 @@
 
                     <div class="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
                         <div class="flex flex-col items-center gap-2">
+                            @php
+                                $highlightPlan = config('plans.highlight');
+                                $highlightPlanData = config("plans.plans.{$highlightPlan}");
+                                $currencyCode = config('plans.billing.currency');
+                                $currencySymbol = $currencyCode === 'EUR' ? '€' : $currencyCode;
+                                $refundDays = config('plans.billing.refund_days');
+                            @endphp
                             <a href="#pricing"
                                class="inline-flex h-11 items-center justify-center rounded-md bg-sky-700 px-8 text-sm font-medium text-white transition-colors hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2"
-                               data-cta="hero-pro"> Start for €39 / month </a>
-                            <p class="text-xs text-slate-600">Cancel anytime • 14-day no-questions refund</p>
+                               data-cta="hero-{{ $highlightPlan }}"> Start
+                                for {{ $currencySymbol }}{{ $highlightPlanData['price_monthly'] }} / month </a>
                         </div>
                         <div class="flex flex-col items-center gap-2">
                             <a href="#pricing"
                                class="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-transparent px-8 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
                             >View pricing</a>
-                            <p class="text-xs text-slate-600">&nbsp;</p>
                         </div>
                     </div>
                 </div>
@@ -125,161 +131,89 @@
                     </div>
                 </div>
 
-                <div class="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
-                    <!-- Starter -->
-                    <article class="flex flex-col rounded-lg border border-slate-300 bg-white">
-                        <div class="flex flex-1 flex-col p-6">
-                            <header>
-                                <h3 class="text-2xl font-semibold text-slate-800">Starter</h3>
-                                <p class="mt-3 text-3xl font-bold text-slate-800">
-                                    <span data-price="starter">€19</span>
-                                    <span class="text-base font-normal text-slate-600"> / <span data-period>month</span></span>
-                                </p>
-                            </header>
+                @php
+                    $plansConfig = config('plans.plans');
+                    $plansOrder = config('plans.order');
+                    $highlightKey = config('plans.highlight');
+                    $currencyCode = config('plans.billing.currency');
+                    $currencySymbol = $currencyCode === 'EUR' ? '€' : $currencyCode;
+                    $yearlyMultiplier = config('plans.billing.yearly_multiplier');
+                    $refundDays = config('plans.billing.refund_days');
+                    $permissionLabels = config('plans.permissions');
+                @endphp
 
-                            <ul class="mt-6 space-y-3">
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>1
-                                    company
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>1
-                                    base currency
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>EU
-                                    invoice templates
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>VAT
-                                    ID format check
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Manual
-                                    VAT rates
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>PDF
-                                    export
-                                </li>
-                            </ul>
+                <div class="mx-auto grid max-w-6xl gap-6 md:grid-cols-{{ count($plansOrder) }}">
+                    @foreach($plansOrder as $planKey)
+                        @php
+                            $plan = $plansConfig[$planKey];
+                            $isHighlighted = $highlightKey === $planKey;
+                            $displayedPermissions = array_filter($plan['permissions'] ?? [], function($value) { return $value === true; });
+                            $currentIndex = array_search($planKey, $plansOrder);
+                            $previousPlanKey = ($currentIndex > 0) ? $plansOrder[$currentIndex - 1] : null;
+                        @endphp
 
-                            <footer class="mt-8">
-                                <a
-                                    class="inline-flex h-11 w-full items-center justify-center rounded-md border border-slate-300 bg-transparent px-4 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                                    href="/register?plan=starter"
-                                    data-plan-link="starter"
-                                >
-                                    Start for <span class="mx-1">€</span><span data-cta-price="starter">19</span> /
-                                    <span class="ml-1" data-period>month</span>
-                                </a>
-                                <p class="mt-2 text-center text-xs text-slate-600">Cancel anytime • 14-day no-questions
-                                    refund</p>
-                            </footer>
-                        </div>
-                    </article>
+                        <article
+                            class="relative flex flex-col rounded-lg {{ $isHighlighted ? 'border-2 border-sky-700 bg-white shadow-lg' : 'border border-slate-300 bg-white' }}">
+                            <div class="flex flex-1 flex-col p-6">
+                                @if(isset($plan['badge']))
+                                    <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+                                        <span
+                                            class="rounded-full bg-sky-700 px-4 py-1 text-sm font-medium text-white">{{ $plan['badge'] }}</span>
+                                    </div>
+                                @endif
 
-                    <!-- Pro -->
-                    <article class="relative flex flex-col rounded-lg border-2 border-sky-700 bg-white shadow-lg">
-                        <div class="flex flex-1 flex-col p-6">
-                            <div class="absolute -top-4 left-1/2 -translate-x-1/2">
-                                <span class="rounded-full bg-sky-700 px-4 py-1 text-sm font-medium text-white">Recommended</span>
+                                <header>
+                                    <h3 class="text-2xl font-semibold text-slate-800">{{ $plan['name'] }}</h3>
+                                    <p class="mt-3 text-3xl font-bold {{ $isHighlighted ? 'text-sky-700' : 'text-slate-800' }}">
+                                        <span
+                                            data-price="{{ $planKey }}">{{ $currencySymbol }}{{ $plan['price_monthly'] }}</span>
+                                        <span class="text-base font-normal text-slate-600"> / <span
+                                                data-period>month</span></span>
+                                    </p>
+                                </header>
+
+                                @if($previousPlanKey)
+                                    @php
+                                        $previousPlan = $plansConfig[$previousPlanKey];
+                                    @endphp
+                                    <p class="mb-4 mt-6 text-sm font-medium text-slate-800">Everything
+                                        in {{ $previousPlan['name'] }}, plus:</p>
+                                @endif
+
+                                <ul class="{{ $previousPlanKey ? 'space-y-3' : 'mt-6 space-y-3' }}">
+                                    @foreach($displayedPermissions as $permissionKey => $value)
+                                        @if(isset($permissionLabels[$permissionKey]))
+                                            <li class="flex gap-3 text-sm text-slate-600">
+                                                <span
+                                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>
+                                                {{ $permissionLabels[$permissionKey] }}
+                                            </li>
+                                        @endif
+                                    @endforeach
+                                </ul>
+
+                                <footer class="mt-8 {{ isset($plan['disclaimer']) ? 'space-y-2' : '' }}">
+                                    <a
+                                        class="inline-flex h-11 w-full items-center justify-center rounded-md {{ $isHighlighted ? 'bg-sky-700 px-4 text-sm font-medium text-white transition-colors hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2' : 'border border-slate-300 bg-transparent px-4 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2' }}"
+                                        href="/register?plan={{ $planKey }}"
+                                        data-plan-link="{{ $planKey }}"
+                                    >
+                                        Start for <span class="mx-1">{{ $currencySymbol }}</span><span
+                                            data-cta-price="{{ $planKey }}">{{ $plan['price_monthly'] }}</span> / <span
+                                            class="ml-1" data-period>month</span>
+                                    </a>
+                                    @if(isset($plan['disclaimer']))
+                                        <p class="text-center text-xs text-slate-600">{{ $plan['disclaimer'] }}</p>
+                                    @endif
+                                </footer>
                             </div>
-
-                            <header>
-                                <h3 class="text-2xl font-semibold text-slate-800">Pro</h3>
-                                <p class="mt-3 text-3xl font-bold text-sky-700">
-                                    <span data-price="pro">€39</span>
-                                    <span class="text-base font-normal text-slate-600"> / <span data-period>month</span></span>
-                                </p>
-                            </header>
-
-                            <p class="mb-4 mt-6 text-sm font-medium text-slate-800">Everything in Starter, plus:</p>
-                            <ul class="space-y-3">
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>VIES
-                                    VAT validation
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Automatic
-                                    VAT rate detection
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Cross-border
-                                    EU B2B logic
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Invoice
-                                    numbering &amp; prefixes
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Accountant-ready
-                                    exports
-                                </li>
-                            </ul>
-
-                            <footer class="mt-8">
-                                <a
-                                    class="inline-flex h-11 w-full items-center justify-center rounded-md bg-sky-700 px-4 text-sm font-medium text-white transition-colors hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2"
-                                    href="/register?plan=pro"
-                                    data-plan-link="pro"
-                                >
-                                    Start for <span class="mx-1">€</span><span data-cta-price="pro">39</span> / <span
-                                        class="ml-1" data-period>month</span>
-                                </a>
-                                <p class="mt-2 text-center text-xs text-slate-600">Cancel anytime • 14-day no-questions
-                                    refund</p>
-                            </footer>
-                        </div>
-                    </article>
-
-                    <!-- Business -->
-                    <article class="flex flex-col rounded-lg border border-slate-300 bg-white">
-                        <div class="flex flex-1 flex-col p-6">
-                            <header>
-                                <h3 class="text-2xl font-semibold text-slate-800">Business</h3>
-                                <p class="mt-3 text-3xl font-bold text-slate-800">
-                                    <span data-price="business">€79</span>
-                                    <span class="text-base font-normal text-slate-600"> / <span data-period>month</span></span>
-                                </p>
-                            </header>
-
-                            <p class="mb-4 mt-6 text-sm font-medium text-slate-800">Everything in Pro, plus:</p>
-                            <ul class="space-y-3">
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Priority
-                                    support
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Audit
-                                    trail (planned)
-                                </li>
-                                <li class="flex gap-3 text-sm text-slate-600"><span
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border border-slate-300"></span>Peppol
-                                    e-invoicing (coming soon)
-                                </li>
-                            </ul>
-
-                            <footer class="mt-8 space-y-2">
-                                <a
-                                    class="inline-flex h-11 w-full items-center justify-center rounded-md border border-slate-300 bg-transparent px-4 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2"
-                                    href="/register?plan=business"
-                                    data-plan-link="business"
-                                >
-                                    Start for <span class="mx-1">€</span><span data-cta-price="business">79</span> /
-                                    <span class="ml-1" data-period>month</span>
-                                </a>
-                                <p class="text-center text-xs text-slate-600">Cancel anytime • 14-day no-questions
-                                    refund</p>
-                                <p class="text-center text-xs text-slate-600">Planned features. Availability may vary by
-                                    country.</p>
-                            </footer>
-                        </div>
-                    </article>
+                        </article>
+                    @endforeach
                 </div>
 
                 <div class="mt-8 text-center">
-                    <p class="text-sm text-slate-600">No free trial. 14-day no-questions refund on your first
+                    <p class="text-sm text-slate-600">No free trial. {{ config('plans.billing.refund_days') }}-day
+                        no-questions refund on your first
                         payment.</p>
                 </div>
             </div>
@@ -395,14 +329,21 @@
                     <h2 class="text-balance text-3xl font-bold text-slate-800 md:text-4xl">Invoice with confidence
                         across the EU</h2>
                     <div class="flex flex-col items-center gap-2">
+                        @php
+                            $highlightPlan = config('plans.highlight');
+                            $highlightPlanData = config("plans.plans.{$highlightPlan}");
+                            $currencyCode = config('plans.billing.currency');
+                            $currencySymbol = $currencyCode === 'EUR' ? '€' : $currencyCode;
+                            $refundDays = config('plans.billing.refund_days');
+                        @endphp
                         <a
                             href="#pricing"
                             class="inline-flex h-11 items-center justify-center rounded-md bg-sky-700 px-8 text-sm font-medium text-white transition-colors hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2"
-                            data-cta="footer-pro"
+                            data-cta="footer-{{ $highlightPlan }}"
                         >
-                            Start for €39 / month
+                            Start for {{ $currencySymbol }}{{ $highlightPlanData['price_monthly'] }} / month
                         </a>
-                        <p class="text-sm text-slate-600">Cancel anytime • 14-day no-questions refund</p>
+                        <p class="text-sm text-slate-600">Cancel anytime • {{ $refundDays }}-day no-questions refund</p>
                     </div>
                 </div>
             </div>
@@ -411,30 +352,47 @@
         <!-- Tiny toggle JS (vanilla) -->
         <script>
             (function () {
+                @php
+                    $plansConfig = config('plans.plans');
+                    $plansOrder = config('plans.order');
+                    $currencyCode = config('plans.billing.currency');
+                    $currencySymbol = $currencyCode === 'EUR' ? '€' : $currencyCode;
+                    $yearlyMultiplier = config('plans.billing.yearly_multiplier');
+                    $highlightPlan = config('plans.highlight');
+                @endphp
+
                 const pricing = {
-                    monthly: {starter: 19, pro: 39, business: 79, period: "month"},
-                    yearly: {starter: 190, pro: 390, business: 790, period: "year"},
+                    monthly: {
+                        @foreach($plansOrder as $planKey)
+                            {{ $planKey }}: {{ $plansConfig[$planKey]['price_monthly'] }},
+                        @endforeach
+                        period: "month"
+                    },
+                    yearly: {
+                        @foreach($plansOrder as $planKey)
+                            {{ $planKey }}: {{ $plansConfig[$planKey]['price_monthly'] * $yearlyMultiplier }},
+                        @endforeach
+                        period: "year"
+                    },
                 };
+
+                const currency = @json($currencySymbol);
+                const highlightPlan = @json($highlightPlan);
 
                 const btnMonthly = document.querySelector('[data-billing="monthly"]');
                 const btnYearly = document.querySelector('[data-billing="yearly"]');
                 const yearlyNote = document.querySelector("[data-yearly-note]");
 
-                const priceEls = {
-                    starter: document.querySelector('[data-price="starter"]'),
-                    pro: document.querySelector('[data-price="pro"]'),
-                    business: document.querySelector('[data-price="business"]'),
-                };
-
-                const ctaPriceEls = {
-                    starter: document.querySelector('[data-cta-price="starter"]'),
-                    pro: document.querySelector('[data-cta-price="pro"]'),
-                    business: document.querySelector('[data-cta-price="business"]'),
-                };
+                const priceEls = {};
+                const ctaPriceEls = {};
+                @foreach($plansOrder as $planKey)
+                    priceEls.{{ $planKey }} = document.querySelector('[data-price="{{ $planKey }}"]');
+                ctaPriceEls.{{ $planKey }} = document.querySelector('[data-cta-price="{{ $planKey }}"]');
+                @endforeach
 
                 const periodEls = Array.from(document.querySelectorAll("[data-period]"));
-                const heroCta = document.querySelector('[data-cta="hero-pro"]');
-                const footerCta = document.querySelector('[data-cta="footer-pro"]');
+                const heroCta = document.querySelector('[data-cta="hero-' + highlightPlan + '"]');
+                const footerCta = document.querySelector('[data-cta="footer-' + highlightPlan + '"]');
 
                 function setActive(activeBtn, inactiveBtn) {
                     activeBtn.classList.add("bg-sky-700", "text-white");
@@ -449,18 +407,19 @@
                 function apply(periodKey) {
                     const p = pricing[periodKey];
 
-                    priceEls.starter.textContent = "€" + p.starter;
-                    priceEls.pro.textContent = "€" + p.pro;
-                    priceEls.business.textContent = "€" + p.business;
-
-                    ctaPriceEls.starter.textContent = String(p.starter);
-                    ctaPriceEls.pro.textContent = String(p.pro);
-                    ctaPriceEls.business.textContent = String(p.business);
+                    @foreach($plansOrder as $planKey)
+                    if (priceEls.{{ $planKey }}) {
+                        priceEls.{{ $planKey }}.textContent = currency + p.{{ $planKey }};
+                    }
+                    if (ctaPriceEls.{{ $planKey }}) {
+                        ctaPriceEls.{{ $planKey }}.textContent = String(p.{{ $planKey }});
+                    }
+                    @endforeach
 
                     periodEls.forEach((el) => (el.textContent = p.period));
 
-                    if (heroCta) heroCta.textContent = "Start for €" + p.pro + " / " + p.period;
-                    if (footerCta) footerCta.textContent = "Start for €" + p.pro + " / " + p.period;
+                    if (heroCta) heroCta.textContent = "Start for " + currency + p[highlightPlan] + " / " + p.period;
+                    if (footerCta) footerCta.textContent = "Start for " + currency + p[highlightPlan] + " / " + p.period;
 
                     if (yearlyNote) yearlyNote.hidden = periodKey !== "yearly";
                 }

@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Jobs\ValidateVatIdentityJob;
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\Subscription;
+use App\Models\User;
 use App\Models\VatIdentity;
 use App\Services\VatIdentityResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -62,13 +64,25 @@ class VatIdentityJobSchedulingTest extends TestCase
         $resolver = app(VatIdentityResolver::class);
 
         $company = Company::factory()->create(['vat_id' => null]); // No VAT ID to avoid observer job
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
+        $this->actingAs($user);
+
         $client = Client::factory()->create([
             'company_id' => $company->id,
             'vat_id' => 'DE123456789',
             'vat_identity_id' => $vatIdentity->id,
         ]);
 
-        $resolver->resolveForClient($client);
+        $resolver->resolveForClient($client, $user);
 
         // Should enqueue because last_enqueued_at is old enough
         Queue::assertPushed(ValidateVatIdentityJob::class, 1);
@@ -150,13 +164,25 @@ class VatIdentityJobSchedulingTest extends TestCase
         $resolver = app(VatIdentityResolver::class);
 
         $company = Company::factory()->create(['vat_id' => null]); // No VAT ID to avoid observer job
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
+        $this->actingAs($user);
+
         $client = Client::factory()->create([
             'company_id' => $company->id,
             'vat_id' => 'DE123456789',
             'vat_identity_id' => $vatIdentity->id,
         ]);
 
-        $result = $resolver->resolveForClient($client);
+        $result = $resolver->resolveForClient($client, $user);
 
         // Should enqueue because validation is stale
         Queue::assertPushed(ValidateVatIdentityJob::class, 1);

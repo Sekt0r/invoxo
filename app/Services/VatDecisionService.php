@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\User;
 
 final class VatDecision
 {
@@ -24,7 +25,7 @@ final class VatDecisionService
         'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
     ];
 
-    public function decide(Company $company, Client $client): VatDecision
+    public function decide(Company $company, Client $client, ?User $user = null): VatDecision
     {
         $seller = strtoupper($company->country_code);
         $buyer = strtoupper($client->country_code);
@@ -43,13 +44,35 @@ final class VatDecisionService
 
         $buyerInEu = in_array($buyer, self::EU, true);
 
-        // Intra-EU B2B (reverse charge) - requires valid VAT ID
-        if ($buyerInEu && !empty($client->vat_id) && $client->vatIdentity?->status === 'valid') {
-            return new VatDecision(
-                taxTreatment: 'EU_B2B_RC',
-                vatRate: 0.0,
-                reasonText: 'Reverse charge (EU B2B).'
-            );
+        // Check permissions (separate concerns)
+        $hasCrossBorderB2B = $user && $user->hasPlanPermission('cross_border_b2b');
+        $hasViesValidation = $user && $user->hasPlanPermission('vies_validation');
+
+        // Intra-EU B2B (reverse charge) automation
+        // Requires cross_border_b2b permission for auto-suggestion
+        // VIES validation permission allows checking validation status, but is not required
+        // Check vat_id presence: must be non-null, non-empty string (trimmed)
+        $vatIdPresent = !empty($client->vat_id) && trim($client->vat_id) !== '';
+        if ($buyerInEu && $vatIdPresent && $hasCrossBorderB2B) {
+            // If user has VIES validation, use validation status for additional confidence
+            // If not, still suggest EU_B2B_RC based on presence of VAT ID
+            $vatStatus = $client->vatIdentity?->status ?? null;
+            $canSuggestRC = true;
+
+            // If we have validation status and it's invalid, don't auto-suggest (user can still select manually)
+            if ($hasViesValidation && $vatStatus === 'invalid') {
+                $canSuggestRC = false;
+            }
+
+            // If we have validation status and it's valid, definitely suggest
+            // If status is pending/unknown but user has cross_border_b2b, still suggest (automation enabled)
+            if ($canSuggestRC) {
+                return new VatDecision(
+                    taxTreatment: 'EU_B2B_RC',
+                    vatRate: 0.0,
+                    reasonText: 'Reverse charge (EU B2B).'
+                );
+            }
         }
 
         // Intra-EU B2C (general services rule for MVP: seller VAT)
@@ -70,25 +93,22 @@ final class VatDecisionService
     }
 
     /**
-     * Get the seller VAT rate using: override -> official standard -> company default
+     * Get the seller VAT rate using: override -> company default_vat_rate
+     *
+     * Company.default_vat_rate represents the country VAT rate (baseline, always valid).
+     * Override is an optional manual escape hatch.
      *
      * @param Company $company
      * @return float
      */
     private function getSellerVatRate(Company $company): float
     {
-        // Check if override is enabled
+        // Check if override is enabled (optional manual escape hatch)
         if ($company->vat_override_enabled && $company->vat_override_rate !== null) {
             return (float)$company->vat_override_rate;
         }
 
-        // Check for official standard rate from tax_rates table
-        $taxRate = \App\Models\TaxRate::where('country_code', strtoupper($company->country_code))->first();
-        if ($taxRate && $taxRate->standard_rate !== null) {
-            return (float)$taxRate->standard_rate;
-        }
-
-        // Fallback to company default
+        // Use company default_vat_rate as baseline (represents country VAT rate)
         return (float)$company->default_vat_rate;
     }
 }

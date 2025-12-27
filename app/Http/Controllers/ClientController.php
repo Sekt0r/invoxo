@@ -38,7 +38,7 @@ class ClientController extends Controller
 
         $client = Client::create($data);
 
-        app(VatIdentityResolver::class)->resolveForClient($client);
+        app(VatIdentityResolver::class)->resolveForClient($client, auth()->user());
 
         $request->session()->flash('client.id', $client->id);
 
@@ -83,7 +83,7 @@ class ClientController extends Controller
         $client->update($data);
         $client->refresh();
 
-        app(VatIdentityResolver::class)->resolveForClient($client);
+        app(VatIdentityResolver::class)->resolveForClient($client, auth()->user());
 
         $request->session()->flash('client.id', $client->id);
 

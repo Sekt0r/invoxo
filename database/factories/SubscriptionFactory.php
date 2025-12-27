@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Company;
-use App\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class SubscriptionFactory extends Factory
@@ -15,7 +14,7 @@ class SubscriptionFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'plan_id' => Plan::factory(),
+            'plan' => 'starter',
             'starts_at' => fake()->dateTime(),
             'ends_at' => fake()->optional()->dateTime(),
         ];

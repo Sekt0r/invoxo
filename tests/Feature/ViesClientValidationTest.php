@@ -6,6 +6,7 @@ use App\Data\ViesResult;
 use App\Jobs\ValidateVatIdentityJob;
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Models\VatIdentity;
 use App\Services\VatDecisionService;
@@ -27,9 +28,16 @@ class ViesClientValidationTest extends TestCase
 
     public function test_client_store_sets_valid_status_when_service_returns_valid(): void
     {
-
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
 
         $response = $this->actingAs($user)->post(route('clients.store'), [
             'name' => 'Test Client',
@@ -55,9 +63,16 @@ class ViesClientValidationTest extends TestCase
 
     public function test_client_store_sets_invalid_status(): void
     {
-
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
 
         $response = $this->actingAs($user)->post(route('clients.store'), [
             'name' => 'Test Client',
@@ -79,9 +94,16 @@ class ViesClientValidationTest extends TestCase
 
     public function test_client_store_sets_unknown_when_service_fails(): void
     {
-
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
 
         $response = $this->actingAs($user)->post(route('clients.store'), [
             'name' => 'Test Client',
@@ -122,9 +144,16 @@ class ViesClientValidationTest extends TestCase
 
     public function test_client_update_refreshes_validation_when_stale(): void
     {
-
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
 
         $vatIdentity = VatIdentity::factory()->stale()->create([
             'country_code' => 'DE',
@@ -173,8 +202,17 @@ class ViesClientValidationTest extends TestCase
         ]);
         $clientValid->load('vatIdentity');
 
+        // User needs Pro plan for VIES validation (required for EU_B2B_RC auto-suggestion)
+        $user = User::factory()->create(['company_id' => $company->id]);
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
         $decisionService = new VatDecisionService();
-        $decision = $decisionService->decide($company, $clientValid);
+        $decision = $decisionService->decide($company, $clientValid, $user);
 
         $this->assertEquals('EU_B2B_RC', $decision->taxTreatment);
         $this->assertEquals(0.0, $decision->vatRate);
@@ -219,5 +257,37 @@ class ViesClientValidationTest extends TestCase
 
         $this->assertEquals('EU_B2C', $decisionInvalid->taxTreatment);
         $this->assertEquals(19.00, $decisionInvalid->vatRate);
+    }
+
+    public function test_starter_plan_user_does_not_queue_vies_validation(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User is on Starter plan (no vies_validation permission)
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'starter',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('clients.store'), [
+            'name' => 'Test Client',
+            'country_code' => 'DE',
+            'vat_id' => 'DE123456789',
+        ]);
+
+        $response->assertRedirect(route('clients.index'));
+
+        $client = Client::where('vat_id', 'DE123456789')->first();
+        $this->assertNotNull($client->vat_identity_id);
+
+        // VAT identity should still be created
+        $vatIdentity = VatIdentity::find($client->vat_identity_id);
+        $this->assertNotNull($vatIdentity);
+
+        // But VIES validation job should NOT be queued (Starter plan lacks permission)
+        Queue::assertNotPushed(ValidateVatIdentityJob::class);
     }
 }

@@ -15,7 +15,7 @@ RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
 
 RUN apt-get update \
  && apt-get install -y -q \
-    libpq-dev zlib1g-dev libxml2-dev wget git libzip-dev mc procps \
+    libpq-dev zlib1g-dev libxml2-dev wget git libzip-dev mc procps postgresql-client\
  && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-install -j$(nproc) pgsql pdo_pgsql opcache xml soap zip pcntl

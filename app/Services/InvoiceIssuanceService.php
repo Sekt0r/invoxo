@@ -114,9 +114,10 @@ final class InvoiceIssuanceService
         }
 
         // Determine VAT decision
+        // Pass user to check VIES validation permission for EU_B2B_RC auto-suggestion
         // If invalid or no VAT ID, VatDecisionService will automatically return B2C
         // (because it checks vatIdentity->status === 'valid' for reverse charge)
-        $vatDecision = $this->vatDecisionService->decide($sellerCompany, $invoice->client);
+        $vatDecision = $this->vatDecisionService->decide($sellerCompany, $invoice->client, $user);
 
         // Force B2C if client has invalid VAT or no VAT ID (extra safety check)
         if (($clientVatStatus === 'invalid' || empty($clientVatId)) && $vatDecision->taxTreatment === 'EU_B2B_RC') {

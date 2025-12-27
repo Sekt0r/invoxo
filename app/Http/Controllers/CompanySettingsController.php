@@ -63,10 +63,8 @@ class CompanySettingsController extends Controller
             'invoice_prefix' => ['required', 'string', 'max:12'],
         ];
 
-        // Only validate default_vat_rate if no official rate exists
-        if (!$hasOfficialRate) {
-            $rules['default_vat_rate'] = ['required', 'numeric', 'between:0,100'];
-        }
+        // default_vat_rate is ALWAYS required and editable (represents country VAT rate)
+        $rules['default_vat_rate'] = ['required', 'numeric', 'between:0,100'];
 
         // Validate override rate when override is enabled
         if ($request->has('vat_override_enabled') && $request->input('vat_override_enabled')) {
@@ -83,16 +81,10 @@ class CompanySettingsController extends Controller
             }
         }
 
-        // Handle default_vat_rate: ignore from request if official rate exists
-        if ($hasOfficialRate) {
-            // Use official rate, ignore any incoming default_vat_rate (prevent tampering)
-            $validated['default_vat_rate'] = (float)$officialTaxRate->standard_rate;
-        } else {
-            // No official rate: use provided default_vat_rate (already validated)
-            // If not provided, preserve existing
-            if (!isset($validated['default_vat_rate'])) {
-                $validated['default_vat_rate'] = $company->default_vat_rate;
-            }
+        // default_vat_rate is always editable (user-provided, represents country VAT rate)
+        // If not provided in request, preserve existing
+        if (!isset($validated['default_vat_rate'])) {
+            $validated['default_vat_rate'] = $company->default_vat_rate;
         }
 
         // Handle vat_override fields (preserve existing values if not provided)
@@ -118,13 +110,9 @@ class CompanySettingsController extends Controller
             $newCountryOfficialRate = TaxRate::where('country_code', strtoupper($validated['country_code']))->first();
             $newCountryHasOfficialRate = $newCountryOfficialRate !== null && $newCountryOfficialRate->standard_rate !== null;
 
-            if (!$validated['vat_override_enabled']) {
-                // Override disabled: update default_vat_rate to new country's standard rate if available
-                if ($newCountryHasOfficialRate) {
-                    $validated['default_vat_rate'] = (float)$newCountryOfficialRate->standard_rate;
-                }
-                // If not available, keep existing default_vat_rate (user can edit it)
-            } else {
+            // default_vat_rate is always user-editable, don't auto-update on country change
+            // User can manually update it if needed
+            if ($validated['vat_override_enabled']) {
                 // Override enabled: set session flags for UI banner
                 session()->flash('company.override_country_changed', true);
                 session()->flash('company.override_country_changed_from', $oldCountry);

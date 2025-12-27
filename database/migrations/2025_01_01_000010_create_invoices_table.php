@@ -20,8 +20,10 @@ return new class extends Migration {
             $table->string('status')->default('draft');
             $table->date('issue_date')->nullable();
             $table->date('due_date')->nullable();
-            $table->string('tax_treatment')->default('DOMESTIC');
             $table->decimal('vat_rate', 5, 2)->default('0');
+            $table->boolean('vat_rate_is_manual')->default(false);
+            $table->string('tax_treatment')->default('DOMESTIC');
+            $table->boolean('tax_treatment_is_manual')->default(false);
             $table->string('vat_reason_text')->nullable();
             $table->bigInteger('subtotal_minor')->default('0');
             $table->bigInteger('vat_minor')->default('0');

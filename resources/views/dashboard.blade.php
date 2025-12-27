@@ -182,7 +182,7 @@
                     <div class="p-6">
                         <div class="text-sm font-medium text-gray-500">Invoices Issued This Month</div>
                         <div class="mt-2 text-3xl font-bold text-gray-900">
-                            This month: {{ $usage['used'] }} / {{ $usage['limit'] === null ? '∞' : $usage['limit'] }} issued invoices
+                            {{ $invoices_issued_this_month }}
                         </div>
                     </div>
                 </div>

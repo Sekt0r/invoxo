@@ -48,8 +48,11 @@ class VatDecisionServiceTest extends TestCase
         $this->assertEquals('DOMESTIC', $decision->taxTreatment);
     }
 
-    public function test_effective_rate_uses_official_when_no_override(): void
+    public function test_effective_rate_uses_default_when_no_override(): void
     {
+        // Note: default_vat_rate is the baseline (country VAT rate), not tax_rates table
+        // Official rates from tax_rates are informational only, not used for VAT calculation
+
         TaxRate::create([
             'country_code' => 'DE',
             'tax_type' => 'vat',
@@ -59,7 +62,7 @@ class VatDecisionServiceTest extends TestCase
 
         $company = Company::factory()->create([
             'country_code' => 'DE',
-            'default_vat_rate' => 15.00, // Fallback rate
+            'default_vat_rate' => 15.00, // Company's country VAT rate (baseline)
             'vat_override_enabled' => false,
             'vat_override_rate' => null,
         ]);
@@ -71,8 +74,8 @@ class VatDecisionServiceTest extends TestCase
 
         $decision = $this->service->decide($company, $client);
 
-        // Should use official rate (19.00), not fallback (15.00)
-        $this->assertEquals(19.00, $decision->vatRate);
+        // Should use company default_vat_rate (15.00), which represents the country VAT rate
+        $this->assertEquals(15.00, $decision->vatRate);
         $this->assertEquals('DOMESTIC', $decision->taxTreatment);
     }
 

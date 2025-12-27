@@ -31,6 +31,17 @@ class VatIdentityTest extends TestCase
 
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
+        $this->actingAs($user);
+
         $client = Client::factory()->create([
             'company_id' => $company->id,
             'country_code' => 'DE',
@@ -38,7 +49,7 @@ class VatIdentityTest extends TestCase
         ]);
 
         $resolver = app(VatIdentityResolver::class);
-        $vatIdentity = $resolver->resolveForClient($client);
+        $vatIdentity = $resolver->resolveForClient($client, $user);
 
         $this->assertNotNull($vatIdentity);
         $this->assertEquals('DE', $vatIdentity->country_code);
@@ -62,6 +73,17 @@ class VatIdentityTest extends TestCase
             'vat_id' => 'DE123456789',
         ]);
         $user = User::factory()->create(['company_id' => $company->id]);
+
+        // User needs Pro plan for VIES validation
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
+        $this->actingAs($user);
+
         $client = Client::factory()->create([
             'company_id' => $company->id,
             'country_code' => 'DE',
@@ -71,10 +93,10 @@ class VatIdentityTest extends TestCase
         $resolver = app(VatIdentityResolver::class);
 
         // Resolve for company
-        $vatIdentityCompany = $resolver->resolveForCompany($company);
+        $vatIdentityCompany = $resolver->resolveForCompany($company, $user);
 
         // Resolve for client (same VAT ID)
-        $vatIdentityClient = $resolver->resolveForClient($client);
+        $vatIdentityClient = $resolver->resolveForClient($client, $user);
 
         // Should point to same vat_identities row
         $this->assertEquals($vatIdentityCompany->id, $vatIdentityClient->id);
@@ -159,8 +181,17 @@ class VatIdentityTest extends TestCase
             'vat_identity_id' => $vatIdentity->id,
         ]);
 
+        // User needs Pro plan for VIES validation (required for EU_B2B_RC auto-suggestion)
+        $user = User::factory()->create(['company_id' => $company->id]);
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
         $decisionService = new \App\Services\VatDecisionService();
-        $decision = $decisionService->decide($company, $client);
+        $decision = $decisionService->decide($company, $client, $user);
 
         $this->assertEquals('EU_B2B_RC', $decision->taxTreatment);
         $this->assertEquals(0.0, $decision->vatRate);

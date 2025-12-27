@@ -15,7 +15,6 @@ class PlanFactory extends Factory
             'code' => fake()->unique()->word(),
             'name' => fake()->name(),
             'monthly_price_eur' => fake()->numberBetween(0, 10000),
-            'invoice_monthly_limit' => fake()->optional()->numberBetween(1, 100),
         ];
     }
 }

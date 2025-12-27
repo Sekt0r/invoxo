@@ -79,4 +79,24 @@ class Company extends Model
     {
         return $this->hasMany(BankAccount::class);
     }
+
+    /**
+     * Get the company's active subscription.
+     *
+     * Returns the most recent subscription that is currently active.
+     * A subscription is active if starts_at <= now and (ends_at is null OR ends_at > now).
+     *
+     * @return \App\Models\Subscription|null
+     */
+    public function activeSubscription(): ?Subscription
+    {
+        return $this->subscriptions()
+            ->where('starts_at', '<=', now())
+            ->where(function ($query) {
+                $query->whereNull('ends_at')
+                    ->orWhere('ends_at', '>', now());
+            })
+            ->orderByDesc('starts_at')
+            ->first();
+    }
 }

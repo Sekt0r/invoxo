@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
-use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -56,16 +55,12 @@ class RegisteredUserController extends Controller
         $user->company_id = $company->id;
         $user->save();
 
-        $starter = Plan::where('code', 'starter')->first();
-
-        if ($starter) {
-            Subscription::create([
-                'company_id' => $company->id,
-                'plan_id' => $starter->id,
-                'starts_at' => Carbon::now(),
-                'ends_at' => null,
-            ]);
-        }
+        Subscription::create([
+            'company_id' => $company->id,
+            'plan' => 'starter',
+            'starts_at' => Carbon::now(),
+            'ends_at' => null,
+        ]);
 
         event(new Registered($user));
 

@@ -36,6 +36,14 @@ class InvoiceIssuanceVatGateTest extends TestCase
 
         $user = User::factory()->create(['company_id' => $company->id]);
 
+        // User needs Pro plan for VIES validation and vat_rate_auto
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
         // Create bank account for invoice currency
         $bankAccount = BankAccount::factory()->create([
             'company_id' => $company->id,

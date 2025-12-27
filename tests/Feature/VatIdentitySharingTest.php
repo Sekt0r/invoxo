@@ -102,16 +102,33 @@ class VatIdentitySharingTest extends TestCase
             'vat_id' => 'DE123456789',
         ]);
 
+        $user1 = User::factory()->create(['company_id' => $company1->id]);
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company1->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
         $company2 = Company::factory()->create([
             'country_code' => 'DE',
             'vat_id' => 'DE123456789', // Same VAT ID
         ]);
 
+        $user2 = User::factory()->create(['company_id' => $company2->id]);
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company2->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
         $resolver = app(VatIdentityResolver::class);
 
+        $this->actingAs($user1);
         // Resolve for both companies (should share same vat_identity)
-        $vatIdentity1 = $resolver->resolveForCompany($company1);
-        $vatIdentity2 = $resolver->resolveForCompany($company2);
+        $vatIdentity1 = $resolver->resolveForCompany($company1, $user1);
+        $vatIdentity2 = $resolver->resolveForCompany($company2, $user1);
         $this->assertEquals($vatIdentity1->id, $vatIdentity2->id);
 
         // Clear the queue to count new dispatches
@@ -119,14 +136,14 @@ class VatIdentitySharingTest extends TestCase
 
         // Update company 1's VAT ID to a new one (should trigger validation for new VAT ID)
         $company1->update(['vat_id' => 'DE987654321']);
-        $vatIdentityNew1 = $resolver->resolveForCompany($company1->fresh());
+        $vatIdentityNew1 = $resolver->resolveForCompany($company1->fresh(), $user1);
 
         // Should have dispatched one job for the new VAT ID (newly created, last_checked_at is null)
         Queue::assertPushed(ValidateVatIdentityJob::class, 1);
 
         // Now update company 2's VAT ID to match company 1's new VAT ID
         $company2->update(['vat_id' => 'DE987654321']);
-        $vatIdentityNew2 = $resolver->resolveForCompany($company2->fresh());
+        $vatIdentityNew2 = $resolver->resolveForCompany($company2->fresh(), $user1);
 
         // They should share the same vat_identity
         $this->assertEquals($vatIdentityNew1->id, $vatIdentityNew2->id, 'Both companies should share the same vat_identity row');

@@ -160,6 +160,17 @@ class CompanyLegalIdentityTest extends TestCase
             'source' => 'provider',
         ]);
 
+        // Ensure default_vat_rate is set and within valid range (0-100) for validation
+        $defaultVatRate = $company->default_vat_rate ?? 19.00;
+        // Factory might generate values > 100, so ensure it's valid
+        if ($defaultVatRate > 100 || $defaultVatRate < 0) {
+            $defaultVatRate = 19.00;
+        }
+        if ($company->default_vat_rate != $defaultVatRate) {
+            $company->update(['default_vat_rate' => $defaultVatRate]);
+            $company->refresh();
+        }
+
         $response = $this->actingAs($user)->put(route('settings.company.update'), [
             'name' => 'Test Company',
             'country_code' => 'RO',
@@ -169,11 +180,26 @@ class CompanyLegalIdentityTest extends TestCase
             'address_line2' => 'Building A',
             'city' => 'Bucharest',
             'postal_code' => '010001',
+            'default_vat_rate' => $defaultVatRate, // Required field
             'invoice_prefix' => 'INV-',
         ]);
 
-        $response->assertRedirect();
-        $company->refresh();
+        // If redirect is not to edit route, validation failed
+        if (!$response->isRedirect(route('settings.company.edit'))) {
+            // Get validation errors
+            $session = $response->getSession();
+            if ($session->has('errors')) {
+                $errors = $session->get('errors')->all();
+                $this->fail('Validation failed. Errors: ' . json_encode($errors));
+            } else {
+                $this->fail('Unexpected redirect. Expected: ' . route('settings.company.edit') . ', Got: ' . $response->getTargetUrl());
+            }
+        }
+
+        $response->assertRedirect(route('settings.company.edit'));
+
+        // Refresh company from database to get updated values (use fresh query to avoid cached relationship)
+        $company = Company::find($company->id);
 
         $this->assertEquals('J12/123/2020', $company->registration_number);
         $this->assertEquals('RO12345678', $company->tax_identifier);

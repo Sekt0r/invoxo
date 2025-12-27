@@ -4,8 +4,9 @@ namespace App\Jobs;
 
 use App\Models\Company;
 use App\Models\Invoice;
+use App\Models\User;
 use App\Services\InvoiceTotalsService;
-use App\Services\VatDecisionService;
+use App\Services\InvoiceVatResolver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,20 +36,26 @@ class RecomputeDraftInvoicesForCompanyJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(VatDecisionService $vatDecisionService, InvoiceTotalsService $totalsService): void
+    public function handle(InvoiceVatResolver $vatResolver, InvoiceTotalsService $totalsService): void
     {
-        $company = Company::find($this->companyId);
+        // Query company fresh from database to ensure we have latest VAT override settings
+        // Don't use find() which might return cached instance - use fresh query
+        $company = Company::where('id', $this->companyId)->first();
 
         if (!$company) {
             Log::warning("RecomputeDraftInvoicesForCompanyJob: Company with ID {$this->companyId} not found.");
             return;
         }
 
+        // Get a user from the company to check vat_rate_auto permission
+        // All users in a company share the same plan, so any user will do
+        $user = User::where('company_id', $this->companyId)->first();
+
         // Process draft invoices in chunks to avoid memory issues
         Invoice::where('company_id', $this->companyId)
             ->where('status', 'draft')
             ->with(['invoiceItems', 'client.vatIdentity'])
-            ->chunkById(100, function ($invoices) use ($company, $vatDecisionService, $totalsService) {
+            ->chunkById(100, function ($invoices) use ($company, $vatResolver, $totalsService, $user) {
                 foreach ($invoices as $invoice) {
                     try {
                         // Reload to ensure we have latest status (safety check)
@@ -59,13 +66,32 @@ class RecomputeDraftInvoicesForCompanyJob implements ShouldQueue
                             continue;
                         }
 
-                        // Recompute VAT decision based on current seller company and client
-                        $decision = $vatDecisionService->decide($company, $invoice->client);
+                        // Load relationships needed for VAT calculation
+                        $invoice->load(['client.vatIdentity']);
 
-                        // Update VAT-related fields
-                        $invoice->tax_treatment = $decision->taxTreatment;
-                        $invoice->vat_rate = $decision->vatRate;
-                        $invoice->vat_reason_text = $decision->reasonText;
+                        // Reload company fresh from database for this invoice to ensure latest VAT override settings
+                        // This is necessary because company may have been updated after job started
+                        $invoice->load('company');
+                        $invoice->company->refresh();
+
+                        // Apply VAT decisioning (respects vat_rate_is_manual and permissions)
+                        // If user has permission, use automatic decisioning; otherwise apply basic VAT correctness
+                        $vatApplied = $vatResolver->applyAutomaticVatIfAllowed($invoice, $user, false);
+
+                        // If automatic VAT wasn't applied (user lacks permission), still apply basic VAT correctness
+                        // VAT correctness is never gated by plan - recompute should always apply correct VAT
+                        if (!$vatApplied && !$invoice->vat_rate_is_manual) {
+                            // Get basic VAT decision and apply it
+                            $decision = app(\App\Services\VatDecisionService::class)->decide($invoice->company, $invoice->client, null);
+                            // Only update tax_treatment if it's not manually set
+                            if (!$invoice->tax_treatment_is_manual) {
+                                $invoice->tax_treatment = $decision->taxTreatment;
+                                $invoice->vat_reason_text = $decision->reasonText;
+                            }
+                            // Always apply VAT rate (unless manually set, which we already checked)
+                            $invoice->vat_rate = $decision->vatRate;
+                            $invoice->vat_decided_at = now();
+                        }
 
                         // Recompute totals from items (server authoritative)
                         $totalsService->recalculate($invoice);

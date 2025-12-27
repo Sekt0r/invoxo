@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\Invoice;
-use App\Services\PlanLimitService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Carbon\Carbon;
@@ -23,7 +22,11 @@ class DashboardController extends Controller
             ->whereBetween('issue_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->sum('total_minor');
 
-        $usage = app(PlanLimitService::class)->usageForMonth($company, Carbon::now());
+        $invoicesIssuedThisMonth = Invoice::where('company_id', $company->id)
+            ->where('status', 'issued')
+            ->whereBetween('issue_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->count();
+
 
         // Load recent clients for the dashboard widget
         $recentClients = Client::query()
@@ -80,8 +83,8 @@ class DashboardController extends Controller
             ->toArray();
 
         return view('dashboard', [
-            'usage' => $usage,
             'revenue_this_month_minor' => $revenueThisMonth,
+            'invoices_issued_this_month' => $invoicesIssuedThisMonth,
             'recentClients' => $recentClients,
             'clientsCount' => $clientsCount,
             'actionRequiredInvoices' => $actionRequiredInvoices,

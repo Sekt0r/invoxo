@@ -3,6 +3,9 @@
 # Goal: maximize shipping speed with minimal code, while keeping the codebase predictable and maintainable.
 
 You are working in a Laravel (PHP) monolith using Blade views (Breeze) for the MVP.
+All commands MUST be executed inside Docker container: invoxo-app-1
+(e.g. `docker exec -it invoxo-app-1 php artisan migrate`)
+
 Priorities: correctness > simplicity > speed. Avoid architecture churn.
 
 ================================================================================
@@ -11,143 +14,211 @@ Priorities: correctness > simplicity > speed. Avoid architecture churn.
 - Minimize moving parts. Prefer the smallest diff that solves the problem.
 - Avoid new dependencies unless explicitly requested.
 - Do not add new migrations unless explicitly requested.
-- Do not run "big refactors" unless asked; keep changes localized.
-- Always respect multi-tenant boundaries: every query must be scoped to auth()->user()->company_id unless explicitly public/share.
+- Do not perform broad refactors unless asked; keep changes localized.
+- Plans unlock AUTOMATION, never correctness.
+- Always respect multi-tenant boundaries.
 
 When uncertain, choose the simplest implementation that:
-- is deterministic,
-- is testable,
-- is easy to delete/replace later.
+- is deterministic
+- is testable
+- is easy to delete or replace later
 
 ================================================================================
-2) CODING STANDARDS (PHP/LARAVEL)
+2) CODING STANDARDS (PHP / LARAVEL)
 ================================================================================
 - Follow PSR-12 and Laravel conventions.
-- Use strict, explicit types where helpful, but do not over-type or add interfaces for everything.
-- Use services for business logic: VAT, totals, invoice numbering, plan limits.
-- Controllers should orchestrate and call services; keep them thin.
+- Use PHP enums where domain values are finite and explicit.
+- Avoid over-abstraction; no interfaces unless there are multiple implementations.
+- Controllers orchestrate; services contain business logic.
 - Use FormRequest for validation + authorization.
-- Never trust client-provided fields for system-owned data:
-  - invoice totals, vat_rate, tax_treatment, number, status, public_id/share_token.
-- Treat "issue invoice" as an idempotent operation.
+- Never trust client-provided values for system-owned fields:
+  - totals, vat_rate, tax_treatment, status, number, public tokens.
 
 File organization:
-- app/Services/* for business logic
-- app/Http/Controllers/* only orchestration
-- app/Http/Requests/* for validation & authorization
-- resources/views/* for Blade UI
+- app/Services/* → business logic (VAT, totals, numbering)
+- app/Http/Controllers/* → orchestration only
+- app/Http/Requests/* → validation & authorization
+- resources/views/* → Blade UI
 
 ================================================================================
 3) DATA OWNERSHIP & MULTI-TENANCY (CRITICAL)
 ================================================================================
-- Any model with company_id must always be filtered by auth()->user()->company_id in:
-  - index/listing queries
-  - route model operations (show/edit/update/destroy/issue)
-  - relation creation
-- Never allow creating/updating records for another company.
+- Any model with company_id MUST be scoped to auth()->user()->company_id.
+- This applies to:
+  - index/list queries
+  - show/edit/update/delete
+  - issuing invoices
+  - route model binding
 
 Enforcement pattern:
-- In controller methods receiving a model via route model binding:
-  - if ((int)$model->company_id !== (int)auth()->user()->company_id) abort(403);
+- If model is injected via route binding:
+  - abort(403) if company_id !== auth user company_id
 - In FormRequests:
-  - authorize() should ensure company_id == auth user company_id (where relevant)
+  - authorize() must enforce company ownership
 
 ================================================================================
-4) INVOICING DOMAIN RULES (MVP)
+4) PLANS & PERMISSIONS (MVP)
+================================================================================
+- config/plans.php is the SINGLE source of truth.
+- No plans table.
+- Subscriptions store plan as STRING (enum-backed).
+- There is ALWAYS a single company.
+- Plans never restrict correctness — only automation.
+
+Permissions:
+- Permissions exist ONLY for gated automation (e.g. vies_validation, vat_rate_auto).
+- Presence of permission key = granted (boolean value is display-only).
+- Universal features MUST NOT be modeled as permissions.
+
+Examples:
+- VAT correctness → always available
+- Manual VAT entry → always available
+- VIES validation → gated (Pro)
+- Automatic VAT decisioning → gated (Pro)
+
+================================================================================
+5) VAT DOMAIN RULES (SERVICES-ONLY MVP)
+================================================================================
+Company:
+- company.default_vat_rate = COUNTRY VAT RATE
+- Always enabled
+- Always required
+- Not gated by plan
+
+Optional:
+- vat_override_enabled + vat_override_rate
+- User-controlled
+- Escape hatch only, never forced by plan
+
+Invoice fields:
+- tax_treatment (UPPERCASE string enum)
+- vat_rate (decimal percentage)
+- vat_rate_is_manual (boolean)
+
+Tax treatments (UPPERCASE, fixed set):
+- DOMESTIC
+- EU_B2B_RC
+- EU_B2C
+- NON_EU
+
+VAT rules:
+- DOMESTIC:
+  - client country == company country
+  - VAT = company.default_vat_rate (or override)
+- EU_B2B_RC:
+  - client in EU + VAT ID present
+  - VAT = 0
+  - reverse charge note
+- EU_B2C:
+  - client in EU + no VAT ID
+  - VAT = company.default_vat_rate (or override)
+- NON_EU:
+  - VAT = 0
+  - outside scope note
+
+Automation rules:
+- VAT auto logic runs ONLY:
+  - if invoice.status = draft
+  - AND user has `vat_rate_auto` permission
+- If vat_rate_is_manual = true → NEVER auto-update VAT
+
+Issuance:
+- Issued invoices are IMMUTABLE
+- VAT snapshot must already exist
+- No recomputation after issue
+
+================================================================================
+6) VIES & VAT ID VALIDATION
+================================================================================
+- VAT ID format validation uses config/vat.php (regex only).
+- VIES is used ONLY for VAT ID validation (not rates).
+- If user lacks `vies_validation` permission:
+  - Do NOT queue VAT ID for VIES
+  - Do NOT show VIES status
+  - VAT ID entry + format validation still allowed
+- VIES validation is NOT retroactive.
+
+================================================================================
+7) INVOICE UX RULES
+================================================================================
+- Always show:
+  - tax_treatment select
+  - vat_rate input
+
+Manual VAT warning:
+- If invoice is draft AND vat_rate_is_manual = true:
+  - Show non-blocking warning:
+    "Manual VAT rate applied. Automatic VAT updates are disabled."
+  - Include action: "Reset to company VAT rate"
+
+Reset behavior:
+- Set vat_rate_is_manual = false
+- Re-run VAT logic immediately
+- No confirmation dialog
+- Not shown on issued invoices
+
+================================================================================
+8) INVOICING MECHANICS
 ================================================================================
 Statuses:
-- draft: editable
-- issued: immutable (no edit/update; only view/share/pdf)
-- paid: optional later
+- draft → editable
+- issued → immutable
+- paid → optional later
 
-Issuing rules:
-- On issue:
-  - recalculate totals (server-side)
-  - ensure VAT snapshot fields exist on invoice (tax_treatment, vat_rate, reason)
-  - assign invoice number if missing
-  - set issue_date if missing
-  - set status=issued
-- Issuing must be idempotent: calling issue twice should not change number/totals unexpectedly.
+Issuing:
+- Recalculate totals server-side
+- Assign invoice number if missing
+- Set issue_date if missing
+- Idempotent: calling issue twice must not change results
 
-Invoice number format (default):
-- {company.invoice_prefix}-{YYYY}-{000001}
-- Sequence is per company per year (based on latest existing invoice number with same prefix/year).
+Invoice number:
+- {prefix}-{YYYY}-{000001}
+- Sequence per company per year
 
 Money:
-- Store as integer minor units:
-  - subtotal_minor, vat_minor, total_minor
-- Quantity is decimal; compute line_total_minor with round-half-up.
-- Never store floats for money amounts (except vat_rate percentage).
-
-VAT (services-only MVP):
-- DOMESTIC: buyer country == company country → VAT = company.default_vat_rate
-- EU_B2B_RC: buyer in EU + client.vat_id present → VAT 0 + reverse charge note
-- EU_B2C: buyer in EU + no vat_id → VAT = company.default_vat_rate
-- NON_EU: VAT 0 + outside scope note
+- Store monetary values as integer minor units
+- Never store floats for money
+- VAT rate remains percentage float
 
 ================================================================================
-5) BLADE UI RULES
+9) BLADE UI RULES
 ================================================================================
-- Use Breeze <x-app-layout>, <x-input-label>, <x-text-input>, <x-primary-button>, etc.
-- Prefer server-rendered forms; no JS unless requested.
-- Keep views functional, minimal. No over-styling.
-- Use readable markup; avoid deeply nested divs.
-
-Routing names:
-- Use standard resource route names (clients.*, invoices.*).
-- Add explicit POST routes for actions like issue.
+- Use Breeze components (<x-app-layout>, inputs, buttons).
+- Server-rendered forms only.
+- No JS unless explicitly requested.
+- Keep markup shallow and readable.
 
 ================================================================================
-6) TESTING & SAFETY CHECKS
+10) TESTING
 ================================================================================
-- For changes affecting core behavior (issue, totals, VAT), add at least one Feature test if time allows.
-- At minimum, ensure:
-  - migration passes
-  - registration works
-  - creating client works
-  - creating invoice works
-  - issuing invoice locks it and assigns number
-- Do not introduce nondeterministic logic.
+- For VAT, issuing, or automation changes:
+  - Add at least one Feature test.
+- Ensure:
+  - invoice creation works
+  - issuing locks invoice
+  - VAT rules behave deterministically
+- Tests must not rely on plan_id or plans table.
 
 ================================================================================
-7) TOOLING (LOCAL)
+11) TOOLING & COMMANDS
 ================================================================================
-- Prefer PHP 8.3+ compatibility (current environment shows PHP 8.3.6).
-- Prefer SQLite in dev (current), Postgres in Docker later.
-- No Alpine images; Debian-based images when Docker is used.
-
-Code formatting:
-- Use Laravel Pint if configured; otherwise keep formatting consistent manually.
-
-================================================================================
-8) CURSOR WORKFLOW RULES (HOW TO EDIT)
-================================================================================
-- Always provide a concise "Plan" before applying changes.
-- Make changes in small diffs:
-  - one feature per commit-level change set
-- Before editing, locate relevant files and reflect existing patterns.
-- Do not overwrite files unless requested; apply incremental edits.
-- After changes, ensure routes compile and no missing imports.
+- All Artisan commands MUST be executed inside Docker:
+  - docker exec -it invoxo-app-1 php artisan migrate
+  - docker exec -it invoxo-app-1 php artisan test
+- PHP 8.3+
+- Debian-based images only
+- No Vite server assumptions
 
 ================================================================================
-9) DO-NOT LIST
+12) DO-NOT LIST
 ================================================================================
 Do NOT:
 - add new packages unless asked
-- add new migrations unless asked
+- add migrations unless asked
 - refactor auth scaffolding
-- introduce queues/redis/caching complexity
-- implement full VAT OSS/e-services logic in MVP
-- implement per-country VAT rates beyond the existing TaxRate table unless asked
-
-================================================================================
-10) QUICK COMMANDS (REFERENCE)
-================================================================================
-- php artisan migrate
-- php artisan migrate:fresh
-- php artisan db:seed
-- php artisan route:list
-- php artisan tinker
+- introduce OSS / goods VAT logic
+- introduce plan-based correctness limits
+- auto-reset VAT without user action
 
 ================================================================================
 END

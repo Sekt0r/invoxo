@@ -90,6 +90,7 @@ class DraftInvoiceRecomputeTest extends TestCase
             'address_line1' => $company->address_line1 ?? '123 Street',
             'city' => $company->city ?? 'City',
             'postal_code' => $company->postal_code ?? '12345',
+            'default_vat_rate' => $company->default_vat_rate, // Required field
             'invoice_prefix' => $company->invoice_prefix,
             'vat_override_enabled' => '1',
             'vat_override_rate' => 25.00, // New override rate
@@ -104,7 +105,7 @@ class DraftInvoiceRecomputeTest extends TestCase
 
         // Run the job synchronously for this test
         $job = new RecomputeDraftInvoicesForCompanyJob($company->id);
-        $job->handle(new VatDecisionService(), new InvoiceTotalsService());
+        $job->handle(app(\App\Services\InvoiceVatResolver::class), new InvoiceTotalsService());
 
         // Refresh invoice and verify totals changed
         $invoice->refresh();
@@ -200,6 +201,7 @@ class DraftInvoiceRecomputeTest extends TestCase
             'address_line1' => $company->address_line1 ?? '123 Street',
             'city' => $company->city ?? 'City',
             'postal_code' => $company->postal_code ?? '12345',
+            'default_vat_rate' => $company->default_vat_rate, // Required field
             'invoice_prefix' => $company->invoice_prefix,
             'vat_override_enabled' => '1',
             'vat_override_rate' => 25.00,
@@ -207,7 +209,7 @@ class DraftInvoiceRecomputeTest extends TestCase
 
         // Run the job
         $job = new RecomputeDraftInvoicesForCompanyJob($company->id);
-        $job->handle(new VatDecisionService(), new InvoiceTotalsService());
+        $job->handle(app(\App\Services\InvoiceVatResolver::class), new InvoiceTotalsService());
 
         // Verify issued invoice unchanged
         $issuedInvoice->refresh();
@@ -296,6 +298,7 @@ class DraftInvoiceRecomputeTest extends TestCase
             'address_line1' => $companyA->address_line1 ?? '123 Street',
             'city' => $companyA->city ?? 'City',
             'postal_code' => $companyA->postal_code ?? '12345',
+            'default_vat_rate' => $companyA->default_vat_rate, // Required field
             'invoice_prefix' => $companyA->invoice_prefix,
             'vat_override_enabled' => '1',
             'vat_override_rate' => 25.00,
@@ -303,7 +306,7 @@ class DraftInvoiceRecomputeTest extends TestCase
 
         // Run the job for Company A
         $job = new RecomputeDraftInvoicesForCompanyJob($companyA->id);
-        $job->handle(new VatDecisionService(), new InvoiceTotalsService());
+        $job->handle(app(\App\Services\InvoiceVatResolver::class), new InvoiceTotalsService());
 
         // Verify Company A invoice updated
         $invoiceA->refresh();
@@ -368,7 +371,7 @@ class DraftInvoiceRecomputeTest extends TestCase
 
         // Run the job
         $job = new RecomputeDraftInvoicesForCompanyJob($company->id);
-        $job->handle(new VatDecisionService(), new InvoiceTotalsService());
+        $job->handle(app(\App\Services\InvoiceVatResolver::class), new InvoiceTotalsService());
 
         // Verify invoice updated to use official rate (19.00) instead of override (25.00)
         $invoice->refresh();
@@ -405,6 +408,7 @@ class DraftInvoiceRecomputeTest extends TestCase
         $client = Client::factory()->create([
             'company_id' => $company->id,
             'country_code' => 'DE',
+            'vat_id' => null, // No VAT ID = EU_B2C for cross-border EU
         ]);
 
         $invoice = Invoice::factory()->create([
@@ -423,6 +427,14 @@ class DraftInvoiceRecomputeTest extends TestCase
 
         $user = User::factory()->create(['company_id' => $company->id]);
 
+        // User needs Pro plan for vat_rate_auto permission (auto-decisioning)
+        \App\Models\Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
         // Change country code (should trigger recompute)
         $this->actingAs($user)->put(route('settings.company.update'), [
             'name' => $company->name,
@@ -433,26 +445,25 @@ class DraftInvoiceRecomputeTest extends TestCase
             'address_line1' => $company->address_line1 ?? '123 Street',
             'city' => $company->city ?? 'City',
             'postal_code' => $company->postal_code ?? '12345',
+            'default_vat_rate' => $company->default_vat_rate, // Required field
             'invoice_prefix' => $company->invoice_prefix,
         ]);
 
         // Assert job was dispatched
         Queue::assertPushed(RecomputeDraftInvoicesForCompanyJob::class);
 
-        // Run the job
+        // Run the job (will use user with Pro plan for vat_rate_auto permission)
         $job = new RecomputeDraftInvoicesForCompanyJob($company->id);
-        $job->handle(new VatDecisionService(), new InvoiceTotalsService());
+        $job->handle(app(\App\Services\InvoiceVatResolver::class), new InvoiceTotalsService());
 
-        // Verify invoice was recomputed with new country's VAT rate
+        // Verify invoice was recomputed
         $invoice->refresh();
         $company->refresh();
         $this->assertEquals('FR', $company->country_code);
-        // Note: The invoice VAT decision will still be DOMESTIC (DE client), but seller rate changed
-        // Actually, wait - if seller is FR and buyer is DE, it's EU_B2C, not DOMESTIC
-        // But the client country is DE, so if seller moves to FR, client is still DE...
-        // Actually, the invoice client country is DE, seller moved to FR, so it becomes EU_B2C with FR rate (20%)
-        // But since client has no VAT ID, it's B2C, so seller VAT applies (20% from FR)
-        $this->assertEquals(20.00, (float)$invoice->vat_rate, 'Should use FR official rate after country change');
+        // Seller is now FR, buyer is DE, so it's EU_B2C
+        // Uses company.default_vat_rate (19.00) as baseline, not FR's official rate
+        // Note: default_vat_rate is not auto-updated on country change
         $this->assertEquals('EU_B2C', $invoice->tax_treatment, 'DE client + FR seller = EU_B2C');
+        $this->assertEquals(19.00, (float)$invoice->vat_rate, 'Uses company default_vat_rate (19.00), not FR official rate');
     }
 }

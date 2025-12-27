@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Jobs\ValidateVatIdentityJob;
 use App\Models\Company;
+use App\Models\Subscription;
+use App\Models\User;
 use App\Models\VatIdentity;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,6 +72,17 @@ class CompanyVatValidationTriggerTest extends TestCase
             'country_code' => 'DE',
             'vat_id' => 'DE123456789',
         ]);
+
+        // User needs Pro plan for VIES validation
+        $user = User::factory()->create(['company_id' => $company->id]);
+        Subscription::factory()->create([
+            'company_id' => $company->id,
+            'plan' => 'pro',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => null,
+        ]);
+
+        $this->actingAs($user);
 
         // Record how many jobs were pushed before the update
         $jobsBeforeUpdate = Queue::pushed(ValidateVatIdentityJob::class)->count();

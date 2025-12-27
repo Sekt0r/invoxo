@@ -4,8 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="application-name" content="Invoxo">
+        <meta name="apple-mobile-web-app-title" content="Invoxo">
+        <meta name="description" content="Create VAT-ready invoices fast. EU VAT rules, reverse charge, and cross-border logic built in.">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>Invoxo | Invoicing & VAT compliance for EU freelancers</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

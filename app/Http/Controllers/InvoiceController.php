@@ -9,7 +9,6 @@ use App\Services\FxConversionService;
 use App\Services\InvoiceIssuanceService;
 use App\Services\InvoiceNumberService;
 use App\Services\InvoiceTotalsService;
-use App\Services\PlanLimitService;
 use App\Services\VatDecisionService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -120,11 +119,24 @@ class InvoiceController extends Controller
             'status' => 'draft',
         ]);
 
-        $decision = app(\App\Services\VatDecisionService::class)->decide($company, $invoice->client);
+        // Load relationships needed for VAT calculation
+        $invoice->load('client', 'company');
 
-        $invoice->tax_treatment = $decision->taxTreatment;
-        $invoice->vat_rate = $decision->vatRate;
-        $invoice->vat_reason_text = $decision->reasonText;
+        // Apply automatic VAT decisioning if user has permission
+        $vatResolver = app(\App\Services\InvoiceVatResolver::class);
+        $vatApplied = $vatResolver->applyAutomaticVatIfAllowed($invoice, auth()->user());
+
+        // If automatic VAT wasn't applied (user lacks permission), still apply basic VAT correctness
+        // VAT correctness is never gated by plan - Starter users should get correct VAT for DOMESTIC/EU_B2C
+        if (!$vatApplied && !$invoice->tax_treatment) {
+            // Get basic VAT decision without automation (no cross_border_b2b logic, just correctness)
+            $decision = app(\App\Services\VatDecisionService::class)->decide($invoice->company, $invoice->client, null);
+            $invoice->tax_treatment = $decision->taxTreatment;
+            $invoice->vat_rate = $decision->vatRate;
+            $invoice->vat_reason_text = $decision->reasonText;
+            $invoice->vat_decided_at = now();
+        }
+
         $invoice->save();
 
         foreach ($data['items'] as $item) {
@@ -202,7 +214,7 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function edit(Request $request, Invoice $invoice): View
+    public function edit(Request $request, Invoice $invoice): View|\Illuminate\Http\RedirectResponse
     {
         if ((int)$invoice->company_id !== (int)auth()->user()->company_id) {
             abort(403);
@@ -291,13 +303,74 @@ class InvoiceController extends Controller
         // payment_details is only set on issue, not during draft edits
         $invoice->save();
 
-        // Reload client relationship for VAT decision
-        $invoice->load('client');
-        $decision = app(\App\Services\VatDecisionService::class)->decide($company, $invoice->client);
+        // Handle VAT calculation (only for draft invoices)
+        // Use InvoiceVatResolver to handle automatic decisioning with permission checks
+        $invoice->load('client', 'company');
 
-        $invoice->tax_treatment = $decision->taxTreatment;
-        $invoice->vat_rate = $decision->vatRate;
-        $invoice->vat_reason_text = $decision->reasonText;
+        $vatResolver = app(\App\Services\InvoiceVatResolver::class);
+        $user = auth()->user();
+
+        // Check if tax_treatment was manually set in request
+        $manualTaxTreatment = $request->has('tax_treatment') ? $request->input('tax_treatment') : null;
+        $manualVatRate = $request->has('vat_rate') ? $request->input('vat_rate') : null;
+        $vatRateReset = $request->has('vat_rate_reset') && $request->input('vat_rate_reset') === '1';
+        $taxTreatmentReset = $request->has('tax_treatment_reset') && $request->input('tax_treatment_reset') === '1';
+
+        // Handle VAT rate reset (only clears vat_rate_is_manual, recomputes VAT rate)
+        if ($vatRateReset) {
+            if ($invoice->status !== 'draft') {
+                return redirect()->route('invoices.show', $invoice);
+            }
+            $invoice->vat_rate_is_manual = false;
+            // Recompute VAT rate based on current tax_treatment
+            $vatResolver->applyVatRateForTreatment($invoice, $user);
+        }
+        // Handle tax treatment reset (only clears tax_treatment_is_manual, recomputes tax treatment if permitted)
+        elseif ($taxTreatmentReset) {
+            if ($invoice->status !== 'draft') {
+                return redirect()->route('invoices.show', $invoice);
+            }
+            $invoice->tax_treatment_is_manual = false;
+            // Recompute tax_treatment if user has automation permissions
+            $vatResolver->applyAutomaticVatIfAllowed($invoice, $user, false);
+            // If VAT rate is not manual, also recompute VAT rate after tax treatment change
+            if (!$invoice->vat_rate_is_manual) {
+                $vatResolver->applyVatRateForTreatment($invoice, $user);
+            }
+        }
+        // Handle manual tax_treatment selection
+        elseif ($manualTaxTreatment !== null && in_array($manualTaxTreatment, ['DOMESTIC', 'EU_B2B_RC', 'EU_B2C', 'NON_EU'], true)) {
+            // User manually selected tax_treatment - mark as manual override
+            $invoice->tax_treatment_is_manual = true;
+            $invoice->tax_treatment = $manualTaxTreatment;
+            $invoice->vat_reason_text = match ($manualTaxTreatment) {
+                'EU_B2B_RC' => 'Reverse charge (EU B2B).',
+                'NON_EU' => 'Outside EU VAT scope.',
+                default => null,
+            };
+
+            // If user manually selected EU_B2B_RC, force vat_rate = 0 and clear vat_rate_is_manual
+            if ($manualTaxTreatment === 'EU_B2B_RC') {
+                $invoice->vat_rate = 0.0;
+                $invoice->vat_rate_is_manual = false;
+            } elseif ($manualVatRate !== null) {
+                // User also manually set VAT rate
+                $invoice->vat_rate_is_manual = true;
+                $invoice->vat_rate = (float)$manualVatRate;
+            } else {
+                // Apply VAT rate based on selected tax_treatment (vat_rate not manual)
+                $vatResolver->applyVatRateForTreatment($invoice, $user);
+            }
+        } elseif ($manualVatRate !== null) {
+            // User manually edited VAT rate only (tax_treatment not manually set)
+            $invoice->vat_rate_is_manual = true;
+            $invoice->vat_rate = (float)$manualVatRate;
+            // Still auto-suggest tax_treatment if user has permission
+            $vatResolver->applyAutomaticVatIfAllowed($invoice, $user, false);
+        } else {
+            // No manual input - apply automatic VAT decisioning if user has permission
+            $vatResolver->applyAutomaticVatIfAllowed($invoice, $user, false);
+        }
 
         // Replace invoice items (delete old, create new)
         $invoice->invoiceItems()->delete();
@@ -346,35 +419,6 @@ class InvoiceController extends Controller
 
     public function issue(Request $request, Invoice $invoice, InvoiceIssuanceService $issuanceService): RedirectResponse
     {
-        // Check plan limit before issuing
-        $company = auth()->user()->company;
-        if (!app(PlanLimitService::class)->canIssueInvoice($company, now())) {
-            // Get plan information for error message
-            $subscription = \App\Models\Subscription::where('company_id', $company->id)
-                ->where(function ($query) {
-                    $query->whereNull('ends_at')
-                        ->orWhere('ends_at', '>', now());
-                })
-                ->orderByDesc('starts_at')
-                ->with('plan')
-                ->first();
-
-            $errorMessage = 'Monthly invoice limit reached for your plan.';
-            if ($subscription && $subscription->plan) {
-                $plan = $subscription->plan;
-                if ($plan->code && $plan->invoice_monthly_limit !== null) {
-                    $errorMessage = "Monthly invoice limit reached for plan {$plan->code} ({$plan->invoice_monthly_limit} invoices/month).";
-                } elseif ($plan->code) {
-                    $errorMessage = "Monthly invoice limit reached for plan {$plan->code}.";
-                } elseif ($plan->invoice_monthly_limit !== null) {
-                    $errorMessage = "Monthly invoice limit reached ({$plan->invoice_monthly_limit} invoices/month).";
-                }
-            }
-
-            return redirect()->route('invoices.show', $invoice)
-                ->withErrors(['limit' => $errorMessage]);
-        }
-
         // Wrap everything in a transaction to ensure row locks work properly
         return DB::transaction(function () use ($invoice, $issuanceService) {
             // Lock invoice row to prevent concurrent issues
@@ -594,7 +638,8 @@ class InvoiceController extends Controller
         }
 
         $sellerCompany = auth()->user()->company;
-        $decision = $vatDecisionService->decide($sellerCompany, $client);
+        // Pass user to check VIES validation permission for EU_B2B_RC auto-suggestion
+        $decision = $vatDecisionService->decide($sellerCompany, $client, auth()->user());
 
         // Determine if invoice can be issued based on client VAT validation status
         $canIssue = true;
@@ -624,5 +669,44 @@ class InvoiceController extends Controller
             'can_issue' => $canIssue,
             'block_reason' => $blockReason,
         ]);
+    }
+
+    /**
+     * Calculate VAT rate for a specific tax treatment.
+     *
+     * @param \App\Models\Company $company
+     * @param \App\Models\Client $client
+     * @param string $taxTreatment
+     * @return float
+     */
+    private function calculateVatRateForTreatment(\App\Models\Company $company, \App\Models\Client $client, string $taxTreatment): float
+    {
+        // Get seller VAT rate (override -> company default_vat_rate)
+        $sellerVatRate = $company->vat_override_enabled && $company->vat_override_rate !== null
+            ? (float)$company->vat_override_rate
+            : (float)$company->default_vat_rate;
+
+        return match ($taxTreatment) {
+            'DOMESTIC' => $sellerVatRate,
+            'EU_B2B_RC' => 0.0,
+            'EU_B2C' => $sellerVatRate,
+            'NON_EU' => 0.0,
+            default => $sellerVatRate,
+        };
+    }
+
+    /**
+     * Get reason text for a specific tax treatment.
+     *
+     * @param string $taxTreatment
+     * @return string|null
+     */
+    private function getReasonTextForTreatment(string $taxTreatment): ?string
+    {
+        return match ($taxTreatment) {
+            'EU_B2B_RC' => 'Reverse charge (EU B2B).',
+            'NON_EU' => 'Outside EU VAT scope.',
+            default => null,
+        };
     }
 }

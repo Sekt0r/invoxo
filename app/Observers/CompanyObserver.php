@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Company;
+use App\Models\User;
 use App\Services\VatIdentityEnqueuer;
 use App\Services\VatIdentityLinker;
 
@@ -63,7 +64,11 @@ class CompanyObserver
             return;
         }
 
-        // Use shared enqueuer with atomic CAS logic
-        $this->enqueuer->enqueueIfStaleAndNotThrottled($vatIdentityId);
+        // Only enqueue VIES validation if user has permission
+        $user = auth()->user();
+        if ($user instanceof User && $user->hasPlanPermission('vies_validation')) {
+            // Use shared enqueuer with atomic CAS logic
+            $this->enqueuer->enqueueIfStaleAndNotThrottled($vatIdentityId);
+        }
     }
 }

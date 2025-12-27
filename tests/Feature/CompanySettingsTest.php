@@ -186,6 +186,7 @@ class CompanySettingsTest extends TestCase
 
         $company = Company::factory()->create([
             'country_code' => 'DE',
+            'default_vat_rate' => 19.00, // Ensure default_vat_rate is set
             'vat_override_enabled' => true,
             'vat_override_rate' => 25.00,
         ]);
@@ -201,6 +202,7 @@ class CompanySettingsTest extends TestCase
             'city' => $company->city ?? 'City',
             'postal_code' => $company->postal_code ?? '12345',
             'vat_id' => $company->vat_id,
+            'default_vat_rate' => $company->default_vat_rate, // Required field
             'invoice_prefix' => $company->invoice_prefix,
             'vat_override_enabled' => '0', // Explicitly disable override
         ]);
@@ -212,8 +214,11 @@ class CompanySettingsTest extends TestCase
         $this->assertNull($company->vat_override_rate);
     }
 
-    public function test_tampering_default_vat_rate_is_ignored_when_official_exists(): void
+    public function test_default_vat_rate_is_always_user_editable(): void
     {
+        // Note: default_vat_rate is always user-editable (represents country VAT rate)
+        // Official rates from tax_rates are informational only, not enforced
+
         Queue::fake();
 
         $taxRate = TaxRate::create([
@@ -229,9 +234,7 @@ class CompanySettingsTest extends TestCase
         ]);
         $user = User::factory()->create(['company_id' => $company->id]);
 
-        $originalRate = $company->default_vat_rate;
-
-        // Try to tamper with default_vat_rate
+        // User can set any value for default_vat_rate (it's their country VAT rate)
         $response = $this->actingAs($user)->put(route('settings.company.update'), [
             'name' => $company->name,
             'country_code' => 'DE',
@@ -241,16 +244,15 @@ class CompanySettingsTest extends TestCase
             'city' => $company->city ?? 'City',
             'postal_code' => $company->postal_code ?? '12345',
             'vat_id' => $company->vat_id,
-            'default_vat_rate' => 99.99, // Tampered value
+            'default_vat_rate' => 99.99, // User-provided value (always accepted)
             'invoice_prefix' => $company->invoice_prefix,
         ]);
 
         $response->assertRedirect(route('settings.company.edit'));
 
         $company->refresh();
-        // Should remain at official rate (19.00), not the tampered value
-        $this->assertEquals(19.00, (float)$company->default_vat_rate);
-        $this->assertNotEquals(99.99, (float)$company->default_vat_rate);
+        // User-provided value is accepted (default_vat_rate is always user-editable)
+        $this->assertEquals(99.99, (float)$company->default_vat_rate);
     }
 
     public function test_company_settings_rejects_invalid_country_code(): void
